@@ -1,0 +1,944 @@
+# NutriFlow — Arquitetura da Lista de Compras Inteligente
+
+## 🧑‍💻 Rafael & Carlos — Sessão de Arquitetura
+
+---
+
+**Rafael:** Carlos, vamos ser diretos. O JSON que o parser entrega já tem tudo que precisamos. A questão agora é: qual arquitetura suporta um MVP rápido mas que não vire dívida técnica em 6 meses?
+
+**Carlos:** Concordo. E antes de escolher tecnologia, preciso que a gente alinhe **o que o MVP realmente precisa fazer**. Porque tem uma diferença enorme entre "lista de compras" e "lista de compras inteligente".
+
+---
+
+## 🎯 Definição do Escopo MVP
+
+```
+O que o MVP DEVE fazer (Must Have):
+├── Receber o JSON do parser (ou o PDF diretamente)
+├── Calcular quantidades para N dias de dieta
+├── Gerar lista de compras consolidada e sem duplicatas
+├── Agrupar itens por categoria (proteínas, carboidratos, etc.)
+├── Permitir marcar itens como "já tenho em casa"
+└── Exportar/compartilhar a lista final
+
+O que o MVP NÃO FAZ ainda (descartado agora):
+├── Integração com supermercado
+├── Estimativa de preço
+├── Painel do nutricionista
+└── Histórico de compras com ML
+```
+
+**Rafael:** Perfeito. Escopo fechado. Agora arquitetura.
+
+---
+
+## 🏗️ Visão Geral da Arquitetura
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        NUTRIFLOW MVP                            │
+│                  Lista de Compras Inteligente                   │
+└─────────────────────────────────────────────────────────────────┘
+
+         ┌──────────────┐         ┌──────────────────────┐
+         │   Mobile App  │         │     Admin / Nutri     │
+         │  (React Native│         │    (Web - futuro)     │
+         │   Expo)       │         │                      │
+         └──────┬───────┘         └──────────┬───────────┘
+                │                            │
+                │  HTTPS / REST              │
+                ▼                            ▼
+┌──────────────────────────────────────────────────────────────┐
+│                        API Gateway                           │
+│                    (FastAPI — Python)                        │
+│                                                              │
+│  ┌─────────────────┐  ┌──────────────┐  ┌────────────────┐  │
+│  │  /upload        │  │  /shopping   │  │  /meal-plan    │  │
+│  │  Recebe PDF/JSON│  │  Lista gerada│  │  Dados do plano│  │
+│  └────────┬────────┘  └──────┬───────┘  └───────┬────────┘  │
+│           │                  │                   │           │
+└───────────┼──────────────────┼───────────────────┼───────────┘
+            │                  │                   │
+            ▼                  ▼                   ▼
+┌───────────────────────────────────────────────────────────────┐
+│                       Core Services                           │
+│                                                               │
+│  ┌─────────────────┐  ┌──────────────────┐  ┌─────────────┐  │
+│  │  WebDietParser  │  │ ShoppingCalc     │  │CategoryMap  │  │
+│  │  (já construído)│  │ Engine           │  │Service      │  │
+│  └─────────────────┘  └──────────────────┘  └─────────────┘  │
+└───────────────────────────────────────────────────────────────┘
+            │
+            ▼
+┌───────────────────────────────────────────────────────────────┐
+│                        Data Layer                             │
+│                                                               │
+│   PostgreSQL (planos, usuários)   Redis (cache de sessão)     │
+└───────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 📦 Estrutura do Projeto
+
+```
+nutriflow/
+│
+├── backend/                          # FastAPI
+│   ├── app/
+│   │   ├── main.py                   # entrypoint FastAPI
+│   │   ├── config.py                 # configurações e env vars
+│   │   │
+│   │   ├── api/
+│   │   │   ├── routes/
+│   │   │   │   ├── upload.py         # POST /upload (PDF ou JSON)
+│   │   │   │   ├── shopping.py       # GET  /shopping/{plan_id}
+│   │   │   │   ├── meal_plan.py      # GET  /meal-plan/{plan_id}
+│   │   │   │   └── checklist.py      # PATCH /checklist/{plan_id}
+│   │   │   └── dependencies.py       # injeção de dependências
+│   │   │
+│   │   ├── core/
+│   │   │   ├── parser/
+│   │   │   │   └── webdiet_parser.py # parser já construído
+│   │   │   ├── shopping/
+│   │   │   │   ├── calculator.py     # ⭐ engine de cálculo
+│   │   │   │   ├── categorizer.py    # agrupamento por categoria
+│   │   │   │   └── consolidator.py   # deduplicação e soma
+│   │   │   └── models/
+│   │   │       ├── diet_plan.py      # DietPlan (já construído)
+│   │   │       └── shopping_list.py  # modelos da lista de compras
+│   │   │
+│   │   ├── db/
+│   │   │   ├── database.py           # conexão SQLAlchemy
+│   │   │   ├── repositories/
+│   │   │   │   ├── plan_repo.py
+│   │   │   │   └── shopping_repo.py
+│   │   │   └── migrations/           # Alembic
+│   │   │
+│   │   └── services/
+│   │       ├── plan_service.py       # orquestra parser + storage
+│   │       └── shopping_service.py   # orquestra cálculo + cache
+│   │
+│   ├── tests/
+│   │   ├── test_calculator.py
+│   │   ├── test_consolidator.py
+│   │   └── test_api.py
+│   │
+│   ├── Dockerfile
+│   └── requirements.txt
+│
+├── mobile/                           # React Native + Expo
+│   ├── src/
+│   │   ├── screens/
+│   │   │   ├── UploadScreen.tsx      # upload do PDF
+│   │   │   ├── ShoppingListScreen.tsx# lista principal ⭐
+│   │   │   └── MealPlanScreen.tsx    # visualização do plano
+│   │   ├── components/
+│   │   │   ├── ShoppingItem.tsx
+│   │   │   ├── CategorySection.tsx
+│   │   │   └── WeekSelector.tsx
+│   │   ├── services/
+│   │   │   └── api.ts                # chamadas ao backend
+│   │   └── store/
+│   │       └── shoppingStore.ts      # Zustand (estado local)
+│   └── app.json
+│
+├── docker-compose.yml
+└── README.md
+```
+
+---
+
+## ⭐ Core Engine — O Coração do Produto
+
+**Carlos:** Rafael, aqui está o ponto mais crítico tecnicamente. O `ShoppingCalculator` precisa pegar o JSON do DietPlan e resolver três problemas:
+
+1. **Escalonamento**: de 1 dia para N dias
+2. **Consolidação**: mesmo alimento aparece em refeições diferentes
+3. **Normalização de unidades**: "2 Unidade(s)" + "100g" do mesmo item
+
+```python
+# backend/app/core/shopping/calculator.py
+
+"""
+calculator.py
+
+Engine de cálculo da lista de compras inteligente.
+Recebe um DietPlan e retorna os itens consolidados
+com quantidades para N dias de dieta.
+"""
+
+from __future__ import annotations
+
+from collections import defaultdict
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Optional
+
+from app.core.models.diet_plan import DietPlan, FoodItem
+
+
+class UnitType(str, Enum):
+    """
+    Classifica o tipo de unidade de medida de um alimento.
+    Usada para determinar a estratégia de consolidação.
+    """
+    WEIGHT_G = "weight_g"        # gramas
+    VOLUME_ML = "volume_ml"      # mililitros
+    UNIT = "unit"                # unidades (ovos, bananas)
+    FREE = "free"                # "à vontade"
+    UNKNOWN = "unknown"
+
+
+@dataclass
+class ShoppingItem:
+    """
+    Item consolidado da lista de compras.
+
+    Attributes:
+        name: Nome normalizado do alimento.
+        total_quantity: Quantidade total calculada para N dias.
+        unit: Unidade de medida normalizada.
+        unit_type: Classificação do tipo de unidade.
+        category: Categoria do alimento (proteína, carboidrato etc.).
+        checked: Se o usuário já marcou como disponível em casa.
+        source_meals: Refeições de onde o item foi extraído.
+        purchase_suggestion: Texto de sugestão de compra
+                             (ex: "2 dúzias de ovos").
+    """
+    name: str
+    total_quantity: float
+    unit: str
+    unit_type: UnitType
+    category: str = "outros"
+    checked: bool = False
+    source_meals: list[str] = field(default_factory=list)
+    purchase_suggestion: Optional[str] = None
+
+
+class UnitNormalizer:
+    """
+    Normaliza unidades de medida para permitir consolidação
+    de um mesmo alimento com unidades diferentes.
+
+    Exemplos:
+        "Unidade(s)" → UnitType.UNIT
+        "g"          → UnitType.WEIGHT_G
+        "ml"         → UnitType.VOLUME_ML
+        "À vontade"  → UnitType.FREE
+    """
+
+    _WEIGHT_KEYWORDS = {"g", "kg", "grama", "gramas"}
+    _VOLUME_KEYWORDS = {"ml", "l", "litro", "litros", "xícara", "copo"}
+    _UNIT_KEYWORDS = {"unidade", "unidades", "unidade(s)", "fatia", "fatias",
+                      "colher", "colheres", "dosador", "dosadores"}
+
+    def classify(self, unit: Optional[str]) -> UnitType:
+        """
+        Classifica o tipo de uma unidade de medida.
+
+        Args:
+            unit: String da unidade extraída do PDF.
+
+        Returns:
+            UnitType correspondente à unidade fornecida.
+        """
+        if not unit:
+            return UnitType.UNKNOWN
+
+        unit_lower = unit.lower().strip()
+
+        if "vontade" in unit_lower:
+            return UnitType.FREE
+        if any(kw in unit_lower for kw in self._WEIGHT_KEYWORDS):
+            return UnitType.WEIGHT_G
+        if any(kw in unit_lower for kw in self._VOLUME_KEYWORDS):
+            return UnitType.VOLUME_ML
+        if any(kw in unit_lower for kw in self._UNIT_KEYWORDS):
+            return UnitType.UNIT
+
+        return UnitType.UNKNOWN
+
+    def to_base_unit(self, quantity: float, unit: str) -> float:
+        """
+        Converte quantidade para unidade base (gramas ou ml).
+        Útil para consolidar "150g" + "0.15kg" do mesmo item.
+
+        Args:
+            quantity: Valor numérico da quantidade.
+            unit: String da unidade.
+
+        Returns:
+            Quantidade na unidade base.
+        """
+        unit_lower = (unit or "").lower()
+        if "kg" in unit_lower:
+            return quantity * 1000
+        if unit_lower in {"l", "litro", "litros"}:
+            return quantity * 1000
+        return quantity
+
+
+class FoodNameNormalizer:
+    """
+    Normaliza nomes de alimentos para permitir deduplicação.
+
+    Problema: o mesmo alimento pode aparecer com nomes ligeiramente
+    diferentes no PDF:
+        "Arroz branco cozido"
+        "Arroz branco"
+        "Feijão Preto (Pronto Light)"
+        "Feijão Preto"
+
+    Estratégia MVP: normalização por stemming simples e
+    remoção de qualificadores comuns. Para v2, usar
+    embedding semântico.
+    """
+
+    # Qualificadores que não identificam o alimento em si
+    _QUALIFIERS = {
+        "cozido", "cozida", "assado", "assada", "desfiado",
+        "desfiada", "integral", "light", "natural", "caseiro",
+        "caseira", "coado", "pronto",
+    }
+
+    def normalize(self, name: str) -> str:
+        """
+        Normaliza o nome de um alimento removendo qualificadores
+        e padronizando capitalização.
+
+        Args:
+            name: Nome bruto do alimento extraído do PDF.
+
+        Returns:
+            Nome normalizado em lowercase sem qualificadores.
+
+        Note:
+            Esta é uma implementação MVP intencional.
+            Para produção, considerar modelo de NLP ou
+            tabela de equivalências curada manualmente.
+        """
+        words = name.lower().strip().split()
+        normalized = [w for w in words if w not in self._QUALIFIERS]
+        return " ".join(normalized)
+
+
+class ShoppingCalculator:
+    """
+    Engine principal de cálculo da lista de compras.
+
+    Responsabilidades:
+        1. Extrair todos os alimentos do DietPlan
+        2. Normalizar nomes e unidades
+        3. Consolidar duplicatas somando quantidades
+        4. Escalonar para N dias
+        5. Gerar sugestão de compra humanizada
+
+    Uso:
+        calculator = ShoppingCalculator()
+        items = calculator.calculate(diet_plan, days=7)
+    """
+
+    def __init__(self) -> None:
+        self._unit_normalizer = UnitNormalizer()
+        self._name_normalizer = FoodNameNormalizer()
+
+    def calculate(
+        self,
+        diet_plan: DietPlan,
+        days: int = 7,
+    ) -> list[ShoppingItem]:
+        """
+        Calcula a lista de compras consolidada para N dias.
+
+        Pipeline:
+            1. Extrai itens de todas as refeições
+            2. Normaliza nomes e unidades
+            3. Consolida por alimento (soma quantidades)
+            4. Escala para N dias
+            5. Gera sugestões de compra
+
+        Args:
+            diet_plan: Plano alimentar parseado.
+            days: Número de dias para calcular (padrão: 7).
+
+        Returns:
+            Lista de ShoppingItem ordenada por categoria.
+        """
+        raw_items = self._extract_all_items(diet_plan)
+        consolidated = self._consolidate(raw_items)
+        scaled = self._scale(consolidated, days)
+        enriched = self._enrich_suggestions(scaled)
+
+        return sorted(enriched, key=lambda x: (x.category, x.name))
+
+    def _extract_all_items(
+        self,
+        diet_plan: DietPlan,
+    ) -> list[tuple[str, FoodItem, str]]:
+        """
+        Extrai todos os FoodItems de todas as refeições,
+        incluindo nome da refeição de origem para rastreabilidade.
+
+        Args:
+            diet_plan: Plano alimentar completo.
+
+        Returns:
+            Lista de tuplas (nome_normalizado, food_item, nome_refeição).
+        """
+        result: list[tuple[str, FoodItem, str]] = []
+
+        for meal in diet_plan.meals:
+            for item in meal.items:
+                if not item.name:
+                    continue
+                normalized_name = self._name_normalizer.normalize(item.name)
+                result.append((normalized_name, item, meal.name))
+
+        return result
+
+    def _consolidate(
+        self,
+        raw_items: list[tuple[str, FoodItem, str]],
+    ) -> dict[str, ShoppingItem]:
+        """
+        Consolida alimentos iguais somando suas quantidades.
+
+        Quando o mesmo alimento aparece em refeições diferentes
+        (ex: ovo no café e no almoço), as quantidades são somadas
+        e as refeições de origem são registradas.
+
+        Args:
+            raw_items: Lista de itens extraídos com nomes normalizados.
+
+        Returns:
+            Dicionário com nome normalizado como chave e
+            ShoppingItem consolidado como valor.
+        """
+        consolidated: dict[str, ShoppingItem] = {}
+
+        for norm_name, food_item, meal_name in raw_items:
+            unit_type = self._unit_normalizer.classify(food_item.unit)
+
+            # Itens "à vontade" não entram no cálculo de quantidade
+            if unit_type == UnitType.FREE:
+                if norm_name not in consolidated:
+                    consolidated[norm_name] = ShoppingItem(
+                        name=food_item.name,
+                        total_quantity=0,
+                        unit="À vontade",
+                        unit_type=UnitType.FREE,
+                        source_meals=[meal_name],
+                    )
+                continue
+
+            qty = food_item.quantity or 0
+            base_qty = self._unit_normalizer.to_base_unit(
+                qty, food_item.unit or ""
+            )
+
+            if norm_name in consolidated:
+                existing = consolidated[norm_name]
+                existing.total_quantity += base_qty
+                if meal_name not in existing.source_meals:
+                    existing.source_meals.append(meal_name)
+            else:
+                consolidated[norm_name] = ShoppingItem(
+                    name=food_item.name,
+                    total_quantity=base_qty,
+                    unit=self._resolve_unit(unit_type, food_item.unit),
+                    unit_type=unit_type,
+                    source_meals=[meal_name],
+                )
+
+        return consolidated
+
+    def _scale(
+        self,
+        consolidated: dict[str, ShoppingItem],
+        days: int,
+    ) -> list[ShoppingItem]:
+        """
+        Multiplica todas as quantidades pelo número de dias.
+
+        O DietPlan representa 1 dia de dieta.
+        Para 7 dias, todas as quantidades são × 7.
+
+        Args:
+            consolidated: Itens consolidados de 1 dia.
+            days: Número de dias desejados.
+
+        Returns:
+            Lista de ShoppingItem com quantidades escalonadas.
+        """
+        scaled: list[ShoppingItem] = []
+
+        for item in consolidated.values():
+            if item.unit_type != UnitType.FREE:
+                item.total_quantity = round(item.total_quantity * days, 1)
+            scaled.append(item)
+
+        return scaled
+
+    def _enrich_suggestions(
+        self,
+        items: list[ShoppingItem],
+    ) -> list[ShoppingItem]:
+        """
+        Gera sugestões de compra humanizadas para cada item.
+
+        Transforma quantidades brutas em sugestões práticas
+        para o momento da compra:
+            - 420g de frango → "~500g (1 bandeja)"
+            - 14 unidades de ovos → "14 unidades (1 dúzia + 2)"
+
+        Args:
+            items: Lista de ShoppingItem escalonados.
+
+        Returns:
+            Lista com campo purchase_suggestion preenchido.
+        """
+        for item in items:
+            item.purchase_suggestion = self._generate_suggestion(item)
+        return items
+
+    def _generate_suggestion(self, item: ShoppingItem) -> Optional[str]:
+        """
+        Gera o texto de sugestão de compra para um item específico.
+
+        Args:
+            item: ShoppingItem com quantidade e unidade definidos.
+
+        Returns:
+            String com sugestão humanizada, ou None para itens
+            sem quantidade definida.
+        """
+        if item.unit_type == UnitType.FREE:
+            return "Compre a quantidade que preferir"
+
+        qty = item.total_quantity
+
+        if item.unit_type == UnitType.UNIT:
+            dozens = int(qty // 12)
+            remainder = int(qty % 12)
+            # Sugestão especial para ovos (produto mais comum em dúzia)
+            if "ovo" in item.name.lower() and dozens > 0:
+                extra = f" + {remainder}" if remainder else ""
+                return f"{int(qty)} unidades ({dozens} dúzia{extra})"
+            return f"{int(qty)} unidades"
+
+        if item.unit_type == UnitType.WEIGHT_G:
+            if qty >= 1000:
+                return f"{qty/1000:.1f}kg"
+            # Arredonda para a embalagem comercial mais próxima
+            rounded = self._round_to_package(qty)
+            return f"~{rounded}g"
+
+        if item.unit_type == UnitType.VOLUME_ML:
+            if qty >= 1000:
+                return f"{qty/1000:.1f}L"
+            return f"{qty:.0f}ml"
+
+        return f"{qty} {item.unit}"
+
+    @staticmethod
+    def _round_to_package(grams: float) -> int:
+        """
+        Arredonda gramas para o tamanho de embalagem comercial
+        mais próximo e suficiente.
+
+        Tamanhos comuns: 250g, 500g, 1000g, 1500g, 2000g
+
+        Args:
+            grams: Quantidade em gramas a ser arredondada.
+
+        Returns:
+            Tamanho de embalagem sugerido em gramas.
+        """
+        packages = [250, 500, 1000, 1500, 2000, 3000, 5000]
+        for pkg in packages:
+            if grams <= pkg:
+                return pkg
+        return int(grams * 1.1)  # +10% de margem se ultrapassar todos
+
+    @staticmethod
+    def _resolve_unit(unit_type: UnitType, original_unit: Optional[str]) -> str:
+        """
+        Retorna a unidade canônica para exibição ao usuário.
+
+        Args:
+            unit_type: Tipo classificado da unidade.
+            original_unit: Unidade original extraída do PDF.
+
+        Returns:
+            String da unidade para exibição.
+        """
+        unit_map = {
+            UnitType.WEIGHT_G: "g",
+            UnitType.VOLUME_ML: "ml",
+            UnitType.UNIT: "un",
+            UnitType.FREE: "à vontade",
+        }
+        return unit_map.get(unit_type, original_unit or "")
+```
+
+---
+
+## 🗄️ Modelo de Dados — PostgreSQL
+
+```sql
+-- migrations/001_initial.sql
+
+-- Usuários do app
+CREATE TABLE users (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name        TEXT NOT NULL,
+    email       TEXT UNIQUE NOT NULL,
+    created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Planos alimentares importados
+CREATE TABLE diet_plans (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id         UUID REFERENCES users(id) ON DELETE CASCADE,
+    source          TEXT NOT NULL DEFAULT 'webdiet_pdf',
+    patient_name    TEXT,
+    plan_version    TEXT,
+    prescribed_at   DATE,
+    raw_json        JSONB NOT NULL,    -- DietPlan completo serializado
+    created_at      TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Lista de compras gerada por plano
+CREATE TABLE shopping_lists (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    diet_plan_id    UUID REFERENCES diet_plans(id) ON DELETE CASCADE,
+    days            INTEGER NOT NULL DEFAULT 7,
+    generated_at    TIMESTAMPTZ DEFAULT NOW(),
+    items           JSONB NOT NULL    -- lista de ShoppingItem serializada
+);
+
+-- Estado de checklist por usuário (itens marcados)
+CREATE TABLE checklist_state (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    shopping_list_id    UUID REFERENCES shopping_lists(id) ON DELETE CASCADE,
+    item_name           TEXT NOT NULL,
+    checked             BOOLEAN DEFAULT FALSE,
+    updated_at          TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(shopping_list_id, item_name)
+);
+
+-- Índices úteis para o MVP
+CREATE INDEX idx_diet_plans_user ON diet_plans(user_id);
+CREATE INDEX idx_shopping_lists_plan ON shopping_lists(diet_plan_id);
+CREATE INDEX idx_checklist_list ON checklist_state(shopping_list_id);
+```
+
+---
+
+## 🔌 API Routes — FastAPI
+
+```python
+# backend/app/api/routes/shopping.py
+
+"""
+shopping.py
+
+Rotas da API relacionadas à lista de compras inteligente.
+"""
+
+from uuid import UUID
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from pydantic import BaseModel
+
+from app.core.shopping.calculator import ShoppingCalculator, ShoppingItem
+from app.services.shopping_service import ShoppingService
+from app.services.plan_service import PlanService
+from app.api.dependencies import get_shopping_service, get_plan_service
+
+router = APIRouter(prefix="/api/v1", tags=["shopping"])
+
+
+class UploadResponse(BaseModel):
+    """Retorno do upload de PDF ou JSON."""
+    plan_id: UUID
+    patient_name: str | None
+    meals_found: int
+    message: str
+
+
+class ShoppingListResponse(BaseModel):
+    """Retorno da lista de compras calculada."""
+    plan_id: UUID
+    days: int
+    total_items: int
+    categories: dict[str, list[ShoppingItem]]
+
+
+class ChecklistUpdate(BaseModel):
+    """Payload para atualizar estado de checklist."""
+    item_name: str
+    checked: bool
+
+
+@router.post("/upload", response_model=UploadResponse)
+async def upload_diet(
+    file: UploadFile = File(...),
+    service: PlanService = Depends(get_plan_service),
+):
+    """
+    Recebe um PDF exportado do WebDiet ou um JSON já parseado.
+    Processa e armazena o plano alimentar do usuário.
+
+    Aceita:
+        - application/pdf
+        - application/json
+
+    Returns:
+        UploadResponse com o ID do plano criado.
+    """
+    allowed = {"application/pdf", "application/json"}
+    if file.content_type not in allowed:
+        raise HTTPException(
+            status_code=415,
+            detail=f"Formato não suportado: {file.content_type}",
+        )
+
+    content = await file.read()
+    plan = await service.process_upload(content, file.content_type)
+
+    return UploadResponse(
+        plan_id=plan.id,
+        patient_name=plan.patient.patient_name,
+        meals_found=len(plan.meals),
+        message="Plano importado com sucesso",
+    )
+
+
+@router.get("/shopping/{plan_id}", response_model=ShoppingListResponse)
+async def get_shopping_list(
+    plan_id: UUID,
+    days: int = 7,
+    service: ShoppingService = Depends(get_shopping_service),
+):
+    """
+    Retorna a lista de compras calculada para N dias.
+
+    Args:
+        plan_id: ID do plano alimentar importado.
+        days: Número de dias para calcular (padrão: 7, máximo: 30).
+
+    Returns:
+        ShoppingListResponse com itens agrupados por categoria.
+    """
+    if not (1 <= days <= 30):
+        raise HTTPException(
+            status_code=422,
+            detail="O parâmetro 'days' deve estar entre 1 e 30.",
+        )
+
+    result = await service.get_shopping_list(plan_id, days)
+    if not result:
+        raise HTTPException(status_code=404, detail="Plano não encontrado.")
+
+    return result
+
+
+@router.patch("/checklist/{plan_id}")
+async def update_checklist(
+    plan_id: UUID,
+    update: ChecklistUpdate,
+    service: ShoppingService = Depends(get_shopping_service),
+):
+    """
+    Atualiza o estado de checagem de um item da lista de compras.
+    Permite que o usuário marque o que já tem em casa.
+
+    Args:
+        plan_id: ID do plano alimentar.
+        update: Item e novo estado (checked: true/false).
+    """
+    await service.update_item_check(plan_id, update.item_name, update.checked)
+    return {"status": "updated"}
+
+
+@router.get("/shopping/{plan_id}/export")
+async def export_shopping_list(
+    plan_id: UUID,
+    days: int = 7,
+    fmt: str = "text",
+    service: ShoppingService = Depends(get_shopping_service),
+):
+    """
+    Exporta a lista de compras em formato compartilhável.
+
+    Args:
+        plan_id: ID do plano.
+        days: Número de dias.
+        fmt: Formato de saída — 'text' (padrão) ou 'json'.
+
+    Returns:
+        Lista formatada para copiar/compartilhar via WhatsApp, etc.
+    """
+    result = await service.export_list(plan_id, days, fmt)
+    return result
+```
+
+---
+
+## 📱 Decisões de Stack — Mobile
+
+```
+React Native + Expo
+├── Justificativa: iOS + Android com 1 codebase no MVP
+├── Expo Go: testes sem build nativo
+└── Expo EAS: distribuição quando necessário
+
+Gerenciamento de Estado
+└── Zustand (não Redux)
+    ├── Justificativa: Redux é overengineering para MVP
+    ├── API simples, sem boilerplate
+    └── Persiste estado local com AsyncStorage plugin
+
+Navegação
+└── Expo Router (file-based, similar ao Next.js)
+
+Requisições HTTP
+└── TanStack Query (React Query)
+    ├── Cache automático das listas geradas
+    ├── Retry automático em falha de rede
+    └── Loading/error states sem código manual
+
+UI Components
+└── NativeWind (Tailwind para React Native)
+    ├── Design system consistente
+    └── Sem dependência de biblioteca de componentes
+        que possa descontinuar
+```
+
+---
+
+## 🛠️ Stack Tecnológica Completa
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  DECISÕES DE STACK — NUTRIFLOW MVP                          │
+├────────────────┬────────────────────┬───────────────────────┤
+│  Camada        │  Tecnologia        │  Justificativa        │
+├────────────────┼────────────────────┼───────────────────────┤
+│  Backend       │  FastAPI (Python)  │  Reusa o parser já    │
+│                │                    │  construído em Python │
+├────────────────┼────────────────────┼───────────────────────┤
+│  Mobile        │  React Native Expo │  iOS+Android, 1 code  │
+├────────────────┼────────────────────┼───────────────────────┤
+│  Banco         │  PostgreSQL        │  JSONB para raw_json  │
+│                │                    │  + relacional p/ users│
+├────────────────┼────────────────────┼───────────────────────┤
+│  Cache         │  Redis             │  Listas já calculadas │
+│                │                    │  não recalculam       │
+├────────────────┼────────────────────┼───────────────────────┤
+│  ORM           │  SQLAlchemy 2.0    │  Async nativo         │
+├────────────────┼────────────────────┼───────────────────────┤
+│  Migrations    │  Alembic           │  Padrão com SQLAlchemy│
+├────────────────┼────────────────────┼───────────────────────┤
+│  Auth          │  Supabase Auth     │  Auth pronto em horas │
+│                │                    │  não dias             │
+├────────────────┼────────────────────┼───────────────────────┤
+│  Storage PDF   │  Supabase Storage  │  S3-compatible,       │
+│                │                    │  integra com Auth     │
+├────────────────┼────────────────────┼───────────────────────┤
+│  Deploy API    │  Railway           │  Deploy de FastAPI    │
+│                │                    │  com 1 comando        │
+├────────────────┼────────────────────┼───────────────────────┤
+│  Testes        │  Pytest + httpx    │  AsyncClient p/ FastAPI│
+├────────────────┼────────────────────┼───────────────────────┤
+│  CI/CD         │  GitHub Actions    │  Free tier suficiente │
+└────────────────┴────────────────────┴───────────────────────┘
+```
+
+---
+
+## 🧪 Teste do Calculator
+
+```python
+# tests/test_calculator.py
+
+"""Testes do ShoppingCalculator com dados reais do PDF."""
+
+import pytest
+from app.core.shopping.calculator import ShoppingCalculator, UnitType
+from app.core.models.diet_plan import DietPlan
+import json
+from pathlib import Path
+
+
+@pytest.fixture
+def real_diet_plan() -> DietPlan:
+    """Carrega o DietPlan gerado pelo parser do PDF real."""
+    json_path = Path("tests/fixtures/carolina_diet.json")
+    return DietPlan.model_validate_json(json_path.read_text())
+
+
+def test_calculator_returns_items(real_diet_plan):
+    calc = ShoppingCalculator()
+    items = calc.calculate(real_diet_plan, days=7)
+    assert len(items) > 0
+
+
+def test_eggs_consolidated_across_meals(real_diet_plan):
+    """Ovos aparecem em 3 refeições — devem ser somados."""
+    calc = ShoppingCalculator()
+    items = calc.calculate(real_diet_plan, days=1)
+    egg_items = [i for i in items if "ovo" in i.name.lower()]
+    assert len(egg_items) == 1  # consolidado em 1 item
+    assert egg_items[0].total_quantity == 6  # 2+2+2 ovos por dia
+
+
+def test_scale_7_days(real_diet_plan):
+    calc = ShoppingCalculator()
+    items_1 = calc.calculate(real_diet_plan, days=1)
+    items_7 = calc.calculate(real_diet_plan, days=7)
+
+    eggs_1 = next(i for i in items_1 if "ovo" in i.name.lower())
+    eggs_7 = next(i for i in items_7 if "ovo" in i.name.lower())
+
+    assert eggs_7.total_quantity == eggs_1.total_quantity * 7
+
+
+def test_purchase_suggestion_eggs(real_diet_plan):
+    calc = ShoppingCalculator()
+    items = calc.calculate(real_diet_plan, days=7)
+    eggs = next(i for i in items if "ovo" in i.name.lower())
+    # 6 ovos/dia × 7 dias = 42 → "3 dúzias + 6"
+    assert "dúzia" in eggs.purchase_suggestion
+```
+
+---
+
+## 🗺️ Roadmap do MVP
+
+```
+Sprint 1 — Semana 1-2
+├── Parser WebDiet → JSON ✅ (já pronto)
+├── ShoppingCalculator (engine de cálculo)
+├── API: POST /upload + GET /shopping/{id}
+└── Banco: tabelas users, diet_plans, shopping_lists
+
+Sprint 2 — Semana 3-4
+├── App mobile: UploadScreen + ShoppingListScreen
+├── Checklist interativo (marcar "já tenho")
+├── Supabase Auth (login simples)
+└── PATCH /checklist endpoint
+
+Sprint 3 — Semana 5-6
+├── Exportar lista (texto para WhatsApp)
+├── CategoryService (agrupar por corredor)
+├── Testes automatizados críticos
+└── Deploy no Railway + TestFlight/Play Store interno
+
+Validação com usuários reais → decisão de continuar
+```
+
+**Carlos:** Rafael, o ponto central desta arquitetura é que o `ShoppingCalculator` é completamente **agnóstico à fonte**. Ele recebe um `DietPlan` — não importa se veio de PDF, API futura ou entrada manual.
+
+**Rafael:** Exatamente. E o Supabase resolve Auth + Storage sem precisar de time de infra no MVP. Quando escalar, a gente migra o que precisar — mas não antes de ter usuários reais pedindo isso.

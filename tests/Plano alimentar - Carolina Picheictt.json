@@ -1,0 +1,540 @@
+{
+  "source": "webdiet_pdf",
+  "patient": {
+    "patient_name": "Carolina Picheictt",
+    "student_name": "Natalya",
+    "prescribed_at": "2026-09-18",
+    "plan_version": "Primeira +600 modificada"
+  },
+  "meals": [
+    {
+      "name": "Café da manhã",
+      "time": "07:00",
+      "items": [
+        {
+          "name": "Ovo de galinha",
+          "quantity": 2.0,
+          "unit": "Unidade(s)",
+          "raw_quantity": "Ovo de galinha 2 Unidade(s) (100g)",
+          "substitution_for": null
+        },
+        {
+          "name": "Pão caseiro mãe",
+          "quantity": 1.0,
+          "unit": "fatia",
+          "raw_quantity": "Pão caseiro mãe 1 fatia (50g)",
+          "substitution_for": null
+        },
+        {
+          "name": "Café coado (intenso)",
+          "quantity": 0.5,
+          "unit": "Xícara(s) chá",
+          "raw_quantity": "Café coado (intenso) 0.5 Xícara(s) chá (100ml)",
+          "substitution_for": null
+        },
+        {
+          "name": "Leite integral",
+          "quantity": 100.0,
+          "unit": "ml",
+          "raw_quantity": "Leite integral 100ml",
+          "substitution_for": null
+        },
+        {
+          "name": "Mel",
+          "quantity": 30.0,
+          "unit": "g",
+          "raw_quantity": "Mel 30g",
+          "substitution_for": null
+        },
+        {
+          "name": "Banana",
+          "quantity": 1.0,
+          "unit": "Unidade(s) grande(s)",
+          "raw_quantity": "Banana 1 Unidade(s) grande(s) (100g)",
+          "substitution_for": null
+        },
+        {
+          "name": "Queijo branco -",
+          "quantity": 2.0,
+          "unit": "Fatia(s)",
+          "raw_quantity": "Queijo branco - 2 Fatia(s) (60g)",
+          "substitution_for": null
+        }
+      ],
+      "substitutions": [
+        {
+          "name": "Queijo branco",
+          "quantity": null,
+          "unit": null,
+          "raw_quantity": "2 Fatia(s) (60g)",
+          "substitution_for": "Ovo de galinha"
+        }
+      ],
+      "notes": null,
+      "nutrients": {
+        "proteins_g": 19.5,
+        "lipids_g": 14.3,
+        "carbs_g": 72.8,
+        "calories_kcal": 490.0
+      }
+    },
+    {
+      "name": "Almoço",
+      "time": "13:00",
+      "items": [
+        {
+          "name": "Arroz branco cozido",
+          "quantity": 150.0,
+          "unit": "g",
+          "raw_quantity": "Arroz branco cozido 150g",
+          "substitution_for": null
+        },
+        {
+          "name": "Feijão Preto",
+          "quantity": 100.0,
+          "unit": "g",
+          "raw_quantity": "Feijão Preto 100g",
+          "substitution_for": null
+        },
+        {
+          "name": "Sobrecoxa de frango sem pele assada",
+          "quantity": 1.0,
+          "unit": "Unidade(s) média(s)",
+          "raw_quantity": "Sobrecoxa de frango sem pele assada 1 Unidade(s) média(s) (65g)",
+          "substitution_for": null
+        },
+        {
+          "name": "Ovo de galinha cozido",
+          "quantity": 2.0,
+          "unit": "Unidade(s)",
+          "raw_quantity": "Ovo de galinha cozido 2 Unidade(s) (100g)",
+          "substitution_for": null
+        },
+        {
+          "name": "Salada com sal e vinagre",
+          "quantity": null,
+          "unit": "À vontade",
+          "raw_quantity": "À vontade",
+          "substitution_for": null
+        }
+      ],
+      "substitutions": [],
+      "notes": "Salada: meio prato todo dia com sal, vinagre e azeite\nAcesse o app e veja o conteúdo completo da sua consulta. Aluno(a) Natalya\nPicheictt Carvalho\nPágina 1/6 | Paciente Carolina Picheictt | Prescrito em: 18/09/2026. Gomes",
+      "nutrients": {
+        "proteins_g": 42.2,
+        "lipids_g": 20.1,
+        "carbs_g": 63.5,
+        "calories_kcal": 613.0
+      }
+    },
+    {
+      "name": "Pré-treino",
+      "time": "16:00",
+      "items": [
+        {
+          "name": "Banana prata",
+          "quantity": 1.0,
+          "unit": "Unidade(s) grande(s)",
+          "raw_quantity": "Banana prata 1 Unidade(s) grande(s) (100g)",
+          "substitution_for": null
+        },
+        {
+          "name": "Iogurte natural caseiro",
+          "quantity": 50.0,
+          "unit": "g",
+          "raw_quantity": "Iogurte natural caseiro 50g",
+          "substitution_for": null
+        },
+        {
+          "name": "Aveia",
+          "quantity": 25.0,
+          "unit": "g",
+          "raw_quantity": "Aveia 25g",
+          "substitution_for": null
+        },
+        {
+          "name": "Pasta de amendoim (Growth)",
+          "quantity": 30.0,
+          "unit": "g",
+          "raw_quantity": "Pasta de amendoim (Growth) 30g",
+          "substitution_for": null
+        }
+      ],
+      "substitutions": [],
+      "notes": null,
+      "nutrients": {
+        "proteins_g": 15.2,
+        "lipids_g": 18.0,
+        "carbs_g": 52.9,
+        "calories_kcal": 414.0
+      }
+    },
+    {
+      "name": "Janta 1",
+      "time": "18:00",
+      "items": [
+        {
+          "name": "Pão caseiro mãe",
+          "quantity": 2.0,
+          "unit": "fatia",
+          "raw_quantity": "Pão caseiro mãe 2 fatia (100g)",
+          "substitution_for": null
+        },
+        {
+          "name": "Frango desfiado",
+          "quantity": 40.0,
+          "unit": "g",
+          "raw_quantity": "Frango desfiado 40g",
+          "substitution_for": null
+        },
+        {
+          "name": "Café coado (intenso)",
+          "quantity": 0.5,
+          "unit": "Xícara(s) chá",
+          "raw_quantity": "Café coado (intenso) 0.5 Xícara(s) chá (100ml)",
+          "substitution_for": null
+        },
+        {
+          "name": "Leite integral",
+          "quantity": 200.0,
+          "unit": "ml",
+          "raw_quantity": "Leite integral 200ml",
+          "substitution_for": null
+        },
+        {
+          "name": "Requeijão light",
+          "quantity": 1.0,
+          "unit": "Colher(es) de sopa cheia(s)",
+          "raw_quantity": "Requeijão light 1 Colher(es) de sopa cheia(s) (30g)",
+          "substitution_for": null
+        },
+        {
+          "name": "Atum em conserva em óleo -",
+          "quantity": 40.0,
+          "unit": "g",
+          "raw_quantity": "Atum em conserva em óleo - 40g",
+          "substitution_for": null
+        }
+      ],
+      "substitutions": [
+        {
+          "name": "Atum em conserva em óleo",
+          "quantity": null,
+          "unit": null,
+          "raw_quantity": "40g",
+          "substitution_for": "Frango desfiado"
+        }
+      ],
+      "notes": null,
+      "nutrients": {
+        "proteins_g": 27.0,
+        "lipids_g": 13.4,
+        "carbs_g": 39.2,
+        "calories_kcal": 387.0
+      }
+    },
+    {
+      "name": "Janta 2-Virado de ovo",
+      "time": "18:00",
+      "items": [
+        {
+          "name": "Café coado (intenso)",
+          "quantity": 0.5,
+          "unit": "Xícara(s) chá",
+          "raw_quantity": "Café coado (intenso) 0.5 Xícara(s) chá (100ml)",
+          "substitution_for": null
+        },
+        {
+          "name": "Leite integral",
+          "quantity": 200.0,
+          "unit": "ml",
+          "raw_quantity": "Leite integral 200ml",
+          "substitution_for": null
+        },
+        {
+          "name": "Farinha de milho",
+          "quantity": 50.0,
+          "unit": "g",
+          "raw_quantity": "Farinha de milho 50g",
+          "substitution_for": null
+        },
+        {
+          "name": "Ovo de galinha",
+          "quantity": 2.0,
+          "unit": "Unidade(s)",
+          "raw_quantity": "Ovo de galinha 2 Unidade(s) (100g)",
+          "substitution_for": null
+        }
+      ],
+      "substitutions": [],
+      "notes": null,
+      "nutrients": {
+        "proteins_g": 22.1,
+        "lipids_g": 16.5,
+        "carbs_g": 55.0,
+        "calories_kcal": 461.0
+      }
+    },
+    {
+      "name": "Janta 3",
+      "time": "18:00",
+      "items": [
+        {
+          "name": "Arroz branco cozido",
+          "quantity": 150.0,
+          "unit": "g",
+          "raw_quantity": "Arroz branco cozido 150g",
+          "substitution_for": null
+        },
+        {
+          "name": "Feijão Preto",
+          "quantity": 100.0,
+          "unit": "g",
+          "raw_quantity": "Feijão Preto 100g",
+          "substitution_for": null
+        },
+        {
+          "name": "Sobrecoxa de frango sem pele assada",
+          "quantity": 1.0,
+          "unit": "Unidade(s) média(s)",
+          "raw_quantity": "Sobrecoxa de frango sem pele assada 1 Unidade(s) média(s) (65g)",
+          "substitution_for": null
+        },
+        {
+          "name": "Salada com sal e vinagre",
+          "quantity": null,
+          "unit": "À vontade",
+          "raw_quantity": "À vontade",
+          "substitution_for": null
+        }
+      ],
+      "substitutions": [],
+      "notes": "Salada: meio prato todo dia com sal, vinagre e azeite",
+      "nutrients": {
+        "proteins_g": 29.7,
+        "lipids_g": 10.1,
+        "carbs_g": 62.3,
+        "calories_kcal": 464.0
+      }
+    },
+    {
+      "name": "Ceia",
+      "time": "20:30",
+      "items": [
+        {
+          "name": "Aveia",
+          "quantity": 2.0,
+          "unit": "Colher(es) de sopa cheia(s)",
+          "raw_quantity": "Aveia 2 Colher(es) de sopa cheia(s) (30g)",
+          "substitution_for": null
+        },
+        {
+          "name": "Banana",
+          "quantity": 1.0,
+          "unit": "Unidade(s) grande(s)",
+          "raw_quantity": "Banana 1 Unidade(s) grande(s) (100g)",
+          "substitution_for": null
+        },
+        {
+          "name": "Whey natural Growth",
+          "quantity": 1.0,
+          "unit": "dosadores",
+          "raw_quantity": "Whey natural Growth 1 dosadores (15g)",
+          "substitution_for": null
+        },
+        {
+          "name": "Leite integral",
+          "quantity": 250.0,
+          "unit": "ml",
+          "raw_quantity": "Leite integral 250ml",
+          "substitution_for": null
+        },
+        {
+          "name": "Mel",
+          "quantity": 40.0,
+          "unit": "g",
+          "raw_quantity": "Mel 40g",
+          "substitution_for": null
+        },
+        {
+          "name": "Leite em pó (Ninho)",
+          "quantity": 30.0,
+          "unit": "g",
+          "raw_quantity": "Leite em pó (Ninho) 30g",
+          "substitution_for": null
+        },
+        {
+          "name": "Café da manhã 19.5g 14.3g 72.8g",
+          "quantity": 490.0,
+          "unit": "Kcal",
+          "raw_quantity": "Café da manhã 19.5g 14.3g 72.8g 490 Kcal",
+          "substitution_for": null
+        },
+        {
+          "name": "Almoço 42.2g 20.1g 63.5g",
+          "quantity": 613.0,
+          "unit": "Kcal",
+          "raw_quantity": "Almoço 42.2g 20.1g 63.5g 613 Kcal",
+          "substitution_for": null
+        },
+        {
+          "name": "Pré-treino 15.2g 18.0g 52.9g",
+          "quantity": 414.0,
+          "unit": "Kcal",
+          "raw_quantity": "Pré-treino 15.2g 18.0g 52.9g 414 Kcal",
+          "substitution_for": null
+        },
+        {
+          "name": "Janta 1 27.0g 13.4g 39.2g",
+          "quantity": 387.0,
+          "unit": "Kcal",
+          "raw_quantity": "Janta 1 27.0g 13.4g 39.2g 387 Kcal",
+          "substitution_for": null
+        },
+        {
+          "name": "Janta 2-Virado de ovo 22.1g 16.5g 55.0g",
+          "quantity": 461.0,
+          "unit": "Kcal",
+          "raw_quantity": "Janta 2-Virado de ovo 22.1g 16.5g 55.0g 461 Kcal",
+          "substitution_for": null
+        },
+        {
+          "name": "Janta 3 29.7g 10.1g 62.3g",
+          "quantity": 464.0,
+          "unit": "Kcal",
+          "raw_quantity": "Janta 3 29.7g 10.1g 62.3g 464 Kcal",
+          "substitution_for": null
+        },
+        {
+          "name": "Ceia 33.3g 19.6g 103.1g",
+          "quantity": 700.0,
+          "unit": "Kcal",
+          "raw_quantity": "Ceia 33.3g 19.6g 103.1g 700 Kcal",
+          "substitution_for": null
+        },
+        {
+          "name": "Total das refeições 132.4g 88.4g 347.4g",
+          "quantity": 2679.0,
+          "unit": "Kcal",
+          "raw_quantity": "Total das refeições 132.4g 88.4g 347.4g 2679 Kcal",
+          "substitution_for": null
+        },
+        {
+          "name": "Iogurte natural (com menos ingredientes) -",
+          "quantity": 1.0,
+          "unit": "Unidade",
+          "raw_quantity": "Iogurte natural (com menos ingredientes) - 1 Unidade (100g)",
+          "substitution_for": null
+        },
+        {
+          "name": "Leite em pó -",
+          "quantity": 6.0,
+          "unit": "Colheres de sopa cheias",
+          "raw_quantity": "Leite em pó - 6 Colheres de sopa cheias (96g)",
+          "substitution_for": null
+        }
+      ],
+      "substitutions": [],
+      "notes": null,
+      "nutrients": {
+        "proteins_g": 33.3,
+        "lipids_g": 19.6,
+        "carbs_g": 103.1,
+        "calories_kcal": 700.0
+      }
+    }
+  ],
+  "nutritional_summary": {
+    "macros": {
+      "proteins_g": 189.0,
+      "lipids_g": 112.0,
+      "carbs_g": 448.8,
+      "calories_kcal": 3529.0
+    },
+    "fatty_acids": {
+      "monounsaturated_g": null,
+      "polyunsaturated_g": null,
+      "saturated_g": null,
+      "trans_g": null,
+      "cholesterol_mg": null
+    },
+    "fiber_g": null,
+    "alcohol_g": null,
+    "minerals": {
+      "calcium_mg": null,
+      "magnesium_mg": null,
+      "phosphorus_mg": null,
+      "iron_mg": null,
+      "sodium_mg": null,
+      "potassium_mg": null,
+      "copper_mg": null,
+      "zinc_mg": null,
+      "selenium_mcg": null
+    },
+    "vitamins": {
+      "vitamin_a_re_mcg": null,
+      "vitamin_a_rea_mcg": null,
+      "vitamin_b9_mcg": null,
+      "vitamin_b12_mcg": null,
+      "thiamine_mg": null,
+      "riboflavin_mg": null,
+      "pyridoxine_mg": null,
+      "niacin_mg": null,
+      "vitamin_c_mg": null,
+      "vitamin_d_mcg": null,
+      "vitamin_e_mg": null
+    }
+  },
+  "shopping_list": [
+    "Arroz branco cozido",
+    "Atum em conserva em óleo",
+    "Aveia",
+    "Azeite de oliva",
+    "Banana",
+    "Banana prata",
+    "Café",
+    "Coxa de frango sem pele",
+    "Feijão Preto (Pronto Light)",
+    "Frango desfiado",
+    "Leite integral (Vitalatte)",
+    "Mamão",
+    "Mel",
+    "Ovo de galinha",
+    "Pasta de amendoim (Growth)",
+    "Pão caseiro mãe",
+    "Queijo Minas Frescal (Frimesa)",
+    "Requeijão light (Danúbio)",
+    "Salada Caesar",
+    "Whey natural Growth"
+  ],
+  "recipes": [
+    {
+      "name": "Iogurte natural caseiro",
+      "servings": 5,
+      "ingredients": [
+        {
+          "name": "Iogurte natural (com menos ingredientes)",
+          "quantity": "1 Unidade (100g)",
+          "amount_raw": "Iogurte natural (com menos ingredientes) - 1 Unidade (100g)"
+        },
+        {
+          "name": "Leite de vaca integral",
+          "quantity": "4 1/2 Copos americano duplos (1080ml)",
+          "amount_raw": "Leite de vaca integral - 4 1/2 Copos americano duplos (1080ml)"
+        },
+        {
+          "name": "Leite em pó",
+          "quantity": "6 Colheres de sopa cheias (96g)",
+          "amount_raw": "Leite em pó - 6 Colheres de sopa cheias (96g)"
+        }
+      ],
+      "instructions": [
+        "Aqueça o leite até uma temperatura que você consiga colocar e ficar com seu dedo por 10 segundos.",
+        "Desligar o fogo. Adicionar o leite em pó e o iogurte e misturar delicadamente até dissolver tudo.",
+        "Despejar a mistura em um pote de vidro.",
+        "Depois de tampar, passar um pano por fora e deixar descansando entre 8 e 10 horas.",
+        "Colocar na geladeira depois de atingir uma consistência mais cremosa."
+      ]
+    }
+  ]
+}
