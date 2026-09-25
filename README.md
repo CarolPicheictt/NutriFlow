@@ -1,149 +1,192 @@
-# Problemática
+# NutriFlow 🥗
 
-💡 Ideia 2 — Gestor Inteligente de Compras
-Rafael: Essa aqui me parece a dor mais universal e menos atendida. Toda semana o paciente precisa comprar os ingredientes certos, nas quantidades certas.
+Transforma um plano alimentar **já prescrito** por um nutricionista em uma
+lista de compras inteligente — calcula quantidades para N dias, consolida
+alimentos repetidos, agrupa por categoria e permite marcar o que você já
+tem em casa.
 
-O parser já entrega a shopping_list. Mas a gente pode ir muito além:
-⌄
-# O que o parser já nos dá:
-shopping_list = [
-  "Arroz branco cozido",
-  "Banana",
-  "Aveia",
-  "Ovo de galinha",
-  ...
-]
+> NutriFlow **não cria dietas** e **não substitui o nutricionista**. Ele
+> parte de um plano alimentar exportado do WebDiet (JSON) e ajuda a
+> executar esse plano nas compras.
 
-# O que o produto pode fazer em cima disso:
-→ Calcular quantidades para 7 dias de dieta
-→ Agrupar por corredor de supermercado
-→ Identificar o que já tem em casa (checklist)
-→ Estimar custo semanal da dieta
-→ Reorder automático: "você costuma comprar na quinta"
-Carlos: E aqui tem uma oportunidade de receita adicional que poucas pessoas estão explorando: integração com supermercados. Rappi, iFood Mercado, Zé Delivery — todos têm API ou permitem deep link. O paciente monta a lista no app e finaliza a compra com 1 clique.
+A ideia original de produto (visão de negócio, monetização, fases
+futuras) está documentada em [`docs/brainstorm-produto.md`](docs/brainstorm-produto.md).
+Este README cobre o que **existe e funciona hoje**.
 
-Rafael: Isso transforma o app de ferramenta em canal de distribuição. Modelo de comissão por pedido. É diferente de assinatura — escala de forma diferente.
+---
 
-┌─────────────────────────────────────────────────────────────┐
-│  Modelo de receita potencial:                               │
-│                                                             │
-│  B2C: Assinatura R$14,90/mês (lista inteligente)           │
-│  B2B: Comissão 2–4% sobre pedidos via integração           │
-│  B2B2C: Plano para nutricionistas (R$49,90/mês)            │
-│         → nutricionista oferece o app ao paciente          │
-└─────────────────────────────────────────────────────────────┘
-Viabilidade: ✅ Alta
-Diferencial de mercado: ✅ Alto — ninguém faz isso focado em dieta prescrita
-Monetização: ✅ Múltiplos vetores
+## Escopo
 
+### ✅ Implementado
 
-💡 Ideia 3 — Planner de Marmitas Semanais
-Carlos: Essa é a que eu mais gosto do ponto de vista técnico e de negócio. O Sunday meal prep é um comportamento já estabelecido em quem segue dieta. O problema é que as pessoas não sabem quanto comprar, quanto cozinhar e como organizar.
+| Funcionalidade | Onde |
+|---|---|
+| Receber plano alimentar em JSON | `POST /api/v1/upload` |
+| Calcular lista de compras para N dias (1 a 30) | `GET /api/v1/shopping/{plan_id}` |
+| Consolidar alimentos duplicados entre refeições | `core/shopping/consolidator.py` |
+| Normalizar nomes (lowercase, remover qualificadores como "cozido", "light" etc.) | `core/shopping/consolidator.py` |
+| Classificar/converter unidades (g, kg, ml, l, unidade, "à vontade") | `core/shopping/units.py` |
+| Agrupar por categoria (proteínas, carboidratos, frutas, verduras e legumes, laticínios, gorduras, outros) | `core/shopping/categorizer.py` |
+| Sugestão de compra humanizada (ex.: "42 unidades (3 dúzias + 6)", "~500g") | `core/shopping/calculator.py` |
+| Checklist (marcar/desmarcar item como "já tenho em casa") | `PATCH /api/v1/checklist/{plan_id}` |
+| Exportar lista em texto (compartilhável) ou JSON | `GET /api/v1/shopping/{plan_id}/export` |
+| Armazenamento em memória, pronto para trocar por banco depois | `services/plan_service.py`, `services/shopping_service.py` |
+| Parser de PDF do WebDiet → JSON (script separado, tratado como dependência externa) | `scrap_do_pdf.py` |
+| Testes automatizados (núcleo + rotas) | `tests/` |
 
-Rafael: E os dados do parser resolvem exatamente isso. Olha o que a gente consegue calcular:
+### ❌ Não implementado (fora de escopo desta etapa)
 
-Exemplo com dados reais do PDF:
+- Upload de PDF diretamente pela API (a rota já valida e retorna `501`,
+  mas a extração real ainda não está ligada — o parser existe em
+  `scrap_do_pdf.py` e pode ser plugado depois)
+- Integração real com o WebDiet (API oficial)
+- Integração com supermercados / finalizar compra
+- Estimativa de preços
+- Painel para nutricionistas
+- Histórico de compras
+- Machine learning / recomendações
+- Autenticação de usuários
+- Aplicativo mobile
+- Persistência real (PostgreSQL, Redis) — hoje tudo é em memória e
+  **reseta quando o processo reinicia**
+- Pagamentos / assinaturas
 
-Sobrecoxa de frango (almoço): 65g × 7 dias = 455g
-Sobrecoxa de frango (jantar 3): 65g × 7 dias = 455g
-Total frango para semana: ~910g ≈ 1kg
+---
 
-Arroz cozido (almoço): 150g × 7 dias = 1050g
-Arroz cozido (jantar 3): 150g × 7 dias = 1050g
-Total arroz cozido: ~2.1kg (≈ 700g cru)
+## Estrutura do projeto
 
-Ovos (café + almoço + jantar 2):
-(2 + 2 + 2) × 7 = 42 ovos/semana
-Carlos: Isso é poderoso. O nutricionista prescreve, o app transforma em plano de produção culinária. Com passos práticos:
+```
+NutriFlow/
+├── scrap_do_pdf.py              # Parser do PDF do WebDiet → DietPlan (dependência externa)
+├── requirements.txt
+├── pytest.ini
+├── backend/
+│   └── app/
+│       ├── main.py              # Entrypoint FastAPI
+│       ├── api/
+│       │   ├── dependencies.py  # Injeção dos serviços (singletons em memória)
+│       │   └── routes/
+│       │       └── shopping.py  # Rotas HTTP
+│       ├── core/
+│       │   ├── models/
+│       │   │   ├── diet_plan.py      # Reexporta DietPlan/Meal/FoodItem do parser
+│       │   │   └── shopping_list.py  # ShoppingItem, UnitType
+│       │   └── shopping/
+│       │       ├── calculator.py     # Orquestrador do cálculo
+│       │       ├── consolidator.py   # Normalização de nomes + consolidação
+│       │       ├── categorizer.py    # Agrupamento por categoria
+│       │       └── units.py          # Classificação/conversão de unidades
+│       └── services/
+│           ├── plan_service.py       # Armazena planos (em memória)
+│           └── shopping_service.py   # Calcula lista, checklist, export
+└── tests/
+    ├── conftest.py
+    ├── fixtures/carolina_diet.json
+    ├── test_calculator.py
+    ├── test_consolidator.py
+    ├── test_categorizer.py
+    └── test_api.py
+```
 
-┌──────────────────────────────────────────────────────────┐
-│  🍳 Seu Prep de Domingo                                  │
-├──────────────────────────────────────────────────────────┤
-│  Compras necessárias para 7 dias:                        │
-│  • 1kg de sobrecoxa de frango                            │
-│  • 42 ovos (3 dúzias + 6)                               │
-│  • 700g de arroz cru                                     │
-│  • 7 bananas                                             │
-│                                                          │
-│  Sequência de preparo sugerida:                          │
-│  1. Cozinhe o arroz (rende as porções da semana)         │
-│  2. Asse o frango (tempere antes)                        │
-│  3. Cozinhe os ovos em lote                              │
-│  4. Separe em 7 marmitas por refeição                    │
-│                                                          │
-│  ⏱️ Tempo estimado: 1h40min                              │
-│  🥡 Marmitas geradas: 14                                 │
-└──────────────────────────────────────────────────────────┘
-Viabilidade: ✅ Alta — requer lógica de escalonamento de receitas
-Diferencial de mercado: ✅ Muito Alto — não existe nada assim integrado com plano nutricional
-Monetização: Assinatura + parcerias com potes/marmitas/containers
+---
 
+## Passo a passo — rodando localmente
 
-💡 Ideia 5 — Ferramenta B2B para Nutricionistas
-Carlos: Rafael, todas as ideias anteriores focam no paciente. Mas tem um ângulo que a gente ainda não explorou: o nutricionista como cliente pagante.
+### 1. Instalar dependências
 
-Rafael: Explica melhor.
+```bash
+pip install -r requirements.txt
+```
 
-Carlos: O nutricionista tem 30, 50, 100 pacientes. Cada um com uma dieta diferente. Problemas reais dele:
+### 2. Rodar os testes
 
-Problemas do nutricionista hoje:
-├── Paciente some após consulta e não segue a dieta
-├── Não sabe se o paciente está comprando os itens certos
-├── Não tem visibilidade de adesão ao plano
-├── Gasta tempo respondendo "posso trocar X por Y?"
-└── Sem dados para embasar ajuste na próxima consulta
-Rafael: E o produto resolve exatamente isso. O nutricionista usa o WebDiet normalmente, exporta o PDF, faz upload no nosso sistema — e o paciente passa a ter o app. O nutricionista vê um painel de adesão:
+```bash
+pytest
+```
 
-┌──────────────────────────────────────────────────────┐
-│  Painel do Nutricionista                             │
-├──────────────────────────────────────────────────────┤
-│  Carolina Picheictt                                  │
-│  Adesão esta semana: 74%  ████████░░                 │
-│  Refeições mais puladas: Pré-treino, Ceia            │
-│  Compras realizadas: ✅ Lista completa               │
-│  Próxima consulta: em 12 dias                        │
-│                                                      │
-│  ⚠️ Alerta: 3 dias sem registrar almoço              │
-└──────────────────────────────────────────────────────┘
-Carlos: Esse é o modelo B2B2C: a gente vende para o nutricionista (R$49–149/mês por plano), e ele oferece o app como diferencial para reter os pacientes. O paciente usa de graça ou com desconto.
+Deve mostrar algo como `28 passed`.
 
-Viabilidade: ✅ Alta
-Diferencial de mercado: ✅ Alto — canal de aquisição escalável via nutricionistas
-Monetização: ✅ SaaS B2B com churn baixo (nutricionista não troca de ferramenta fácil)
+### 3. Subir a API
 
+```bash
+python -m uvicorn app.main:app --reload --app-dir backend
+```
 
-________________________________________________________
+A API sobe em `http://127.0.0.1:8000`. Documentação interativa (Swagger)
+em `http://127.0.0.1:8000/docs`.
 
-FASE 1 — Validação (2–3 meses)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-MVP: Upload do PDF + Lista de Compras Inteligente
-→ Problema mais universal, menor fricção
-→ Dá para validar com 50 usuários reais
-→ Não precisa de backend complexo
-→ Monetização: freemium (lista básica grátis, 
-  quantidades semanais = pago)
+### 4. Fazer upload de um plano alimentar
 
-FASE 2 — Retenção (3–6 meses)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-+ Notificações de refeição
-+ Planner de marmitas
-+ Registro de adesão
-→ Aumenta DAU e justifica assinatura
+Use um JSON de plano alimentar (ex.: `tests/fixtures/carolina_diet.json`,
+gerado a partir de um PDF real do WebDiet pelo parser `scrap_do_pdf.py`):
 
-FASE 3 — Escala (6–12 meses)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-+ Painel do nutricionista (B2B)
-+ Integração com supermercados
-+ Parceria/API com WebDiet
-→ Muda o modelo de B2C para B2B2C
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/upload \
+  -F "file=@tests/fixtures/carolina_diet.json;type=application/json"
+```
 
-Rafael: Se eu precisasse resumir em uma frase: o produto é um copiloto da dieta prescrita. Não substitui o nutricionista, não cria dietas — ele pega o trabalho que o nutricionista já fez e garante que o paciente consiga executar.
+Resposta:
 
-Carlos: E o ponto mais importante que ficou claro nessa discussão: o PDF é a porta de entrada, mas o valor está nos comportamentos que o app cria. Comprar certo, preparar certo, comer certo, na hora certa.
+```json
+{
+  "plan_id": "8f1e2c...-...",
+  "patient_name": "Carolina Picheictt",
+  "meals_found": 7,
+  "message": "Plano importado com sucesso"
+}
+```
 
-O parser que a gente construiu hoje é a fundação técnica de tudo isso. E quando vier a API do WebDiet, a gente troca a ingestão sem mexer em nada do produto.
+Guarde o `plan_id` — ele é necessário nos próximos passos.
 
-Rafael: Nome do produto?
+### 5. Calcular a lista de compras
 
-Carlos: NutriFlow. 🥗
-________________________________________________________
+```bash
+curl "http://127.0.0.1:8000/api/v1/shopping/{plan_id}?days=7"
+```
+
+Retorna os itens já consolidados, escalonados para 7 dias e agrupados por
+categoria (`proteínas`, `carboidratos`, `frutas`, `verduras e legumes`,
+`laticínios`, `gorduras`, `outros`).
+
+`days` aceita valores entre 1 e 30 — fora disso a API responde `422`.
+
+### 6. Marcar um item como "já tenho em casa"
+
+```bash
+curl -X PATCH http://127.0.0.1:8000/api/v1/checklist/{plan_id} \
+  -H "Content-Type: application/json" \
+  -d '{"item_name": "Arroz branco", "checked": true}'
+```
+
+O estado do checklist é por alimento (independe do número de dias
+escolhido) e vale para as próximas consultas à lista desse plano.
+
+### 7. Exportar a lista
+
+Texto pronto para compartilhar:
+
+```bash
+curl "http://127.0.0.1:8000/api/v1/shopping/{plan_id}/export?days=7&fmt=text"
+```
+
+JSON estruturado:
+
+```bash
+curl "http://127.0.0.1:8000/api/v1/shopping/{plan_id}/export?days=7&fmt=json"
+```
+
+---
+
+## Observações importantes
+
+- **Sem persistência real**: os planos e o checklist vivem em memória do
+  processo. Reiniciar a API apaga tudo. As interfaces (`PlanRepository`,
+  `ChecklistRepository`) já estão desenhadas para permitir trocar por
+  PostgreSQL sem alterar os serviços ou as rotas.
+- **Unidades incompatíveis não são somadas**: se o mesmo alimento aparecer
+  como "100 g" numa refeição e "2 unidades" em outra, o NutriFlow mantém
+  a primeira quantidade e não faz uma soma sem sentido — isso é
+  intencional e coberto por teste.
+- **Normalização de nomes é simples (MVP)**: remove espaços extras,
+  lowercase e qualificadores comuns ("cozido", "light", "integral" etc.).
+  Não há stemming nem IA semântica nesta versão.
