@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>NutriFlow — Lista de compras</title>
+<link rel="icon" href="data:," />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F5F7F1;
+    --surface: #FFFFFF;
+    --ink: #1F2E23;
+    --muted: #62705F;
+    --border: #DDE4D6;
+    --primary: #3C6E47;
+    --primary-hover: #2E5636;
+    --primary-tint: #E7F0E5;
+    --accent: #C98A2C;
+    --accent-tint: #F7ECD8;
+    --danger: #A9432E;
+    --danger-tint: #F7E7E2;
+
+    --cat-proteinas: #A9432E;
+    --cat-carboidratos: #C98A2C;
+    --cat-frutas: #C9607A;
+    --cat-verduras: #3C6E47;
+    --cat-laticinios: #5E85AC;
+    --cat-gorduras: #957A3E;
+    --cat-outros: #8C8577;
+
+    --serif: 'Fraunces', Georgia, serif;
+    --sans: 'IBM Plex Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --radius: 10px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+
+  body {
+    margin: 0;
+    font-family: var(--sans);
+    color: var(--ink);
+    background: var(--bg);
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+
+  .wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 40px 20px 96px;
+  }
+
+  /* ---------- Header ---------- */
+  header.app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .brand svg { flex-shrink: 0; }
+
+  .brand-text h1 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 22px;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+
+  .brand-text p {
+    margin: 2px 0 0;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .settings-toggle {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-family: var(--sans);
+  }
+  .settings-toggle:hover { background: var(--border); color: var(--ink); }
+
+  .settings-panel {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 20px;
+    font-size: 13px;
+  }
+  .settings-panel.open { display: block; }
+  .settings-panel label { display: block; color: var(--muted); margin-bottom: 6px; }
+  .settings-panel input {
+    width: 100%;
+    font-family: var(--sans);
+    font-size: 13px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--ink);
+  }
+
+  /* ---------- Cards ---------- */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+  }
+
+  /* ---------- Upload (empty state) ---------- */
+  .dropzone {
+    border: 1.5px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 40px 20px;
+    text-align: center;
+    background: var(--surface);
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .dropzone.drag { border-color: var(--primary); background: var(--primary-tint); }
+
+  .dropzone svg { color: var(--muted); margin-bottom: 12px; }
+
+  .dropzone h2 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 18px;
+    margin: 0 0 6px;
+  }
+
+  .dropzone p {
+    color: var(--muted);
+    font-size: 14px;
+    margin: 0 0 18px;
+    line-height: 1.5;
+  }
+
+  input[type="file"] { display: none; }
+
+  /* ---------- Buttons ---------- */
+  .btn {
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 500;
+    padding: 10px 18px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.12s ease, border-color 0.12s ease, opacity 0.12s ease;
+  }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
+  .btn-secondary { background: var(--surface); color: var(--ink); border-color: var(--border); }
+  .btn-secondary:hover:not(:disabled) { border-color: var(--primary); }
+  .btn-text { background: none; color: var(--muted); padding: 6px 4px; border: none; }
+  .btn-text:hover { color: var(--ink); }
+
+  /* ---------- Plan summary bar ---------- */
+  .plan-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin-bottom: 16px;
+  }
+  .plan-bar .info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .plan-bar .info strong { font-size: 15px; }
+  .plan-bar .info span { font-size: 12px; color: var(--muted); }
+
+  /* ---------- Controls ---------- */
+  .controls {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+
+  .stepper {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--surface);
+  }
+  .stepper button {
+    background: none;
+    border: none;
+    width: 34px;
+    height: 36px;
+    font-size: 16px;
+    cursor: pointer;
+    color: var(--ink);
+  }
+  .stepper button:hover { background: var(--bg); }
+  .stepper input {
+    width: 46px;
+    text-align: center;
+    border: none;
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    font-family: var(--sans);
+    font-size: 14px;
+    height: 36px;
+    color: var(--ink);
+    background: var(--surface);
+  }
+  .stepper-label { font-size: 13px; color: var(--muted); margin-right: -4px; }
+
+  .progress-block { flex: 1; min-width: 160px; }
+  .progress-text { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .progress-track {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--border);
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 3px;
+    width: 0%;
+    transition: width 0.25s ease;
+  }
+
+  /* ---------- Category sections ---------- */
+  .list-container {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  .list-container.revealed {
+    animation: reveal 0.35s ease forwards;
+  }
+  @keyframes reveal {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .category {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--cat-color, var(--border));
+    border-radius: var(--radius);
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
+
+  .category-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .category-header h3 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 15px;
+    margin: 0;
+    text-transform: capitalize;
+  }
+  .category-header span {
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .item-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .item-row:last-child { border-bottom: none; }
+
+  .item-row input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary);
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  .item-name {
+    flex: 1;
+    font-size: 14px;
+    min-width: 0;
+    overflow-wrap: break-word;
+  }
+  .item-row.checked .item-name {
+    color: var(--muted);
+    text-decoration: line-through;
+  }
+
+  .item-suggestion {
+    font-size: 13px;
+    color: var(--muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .item-row.checked .item-suggestion { color: #A6AE9E; }
+
+  /* ---------- Export row ---------- */
+  .export-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+
+  /* ---------- Empty / error text ---------- */
+  .inline-error {
+    display: none;
+    background: var(--danger-tint);
+    color: var(--danger);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    margin-top: 14px;
+    text-align: left;
+  }
+  .inline-error.show { display: block; }
+
+  .empty-list {
+    text-align: center;
+    color: var(--muted);
+    font-size: 14px;
+    padding: 40px 20px;
+  }
+
+  /* ---------- Toast ---------- */
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%) translateY(12px);
+    background: var(--ink);
+    color: #fff;
+    font-size: 13px;
+    padding: 10px 18px;
+    border-radius: 8px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    max-width: 90vw;
+    text-align: center;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .toast.error { background: var(--danger); }
+
+  footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 36px;
+  }
+
+  @media (max-width: 480px) {
+    .wrap { padding: 28px 14px 90px; }
+    .plan-bar { flex-direction: column; align-items: flex-start; }
+    .controls { flex-direction: column; align-items: stretch; }
+    .progress-block { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="app-header">
+    <div class="brand">
+      <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M15 27C9 27 4 22.5 4 16.5C4 10 9.5 3 16 3C16 3 15.5 8 18.5 11C21.5 14 26 14.5 26 14.5C26 21.5 21 27 15 27Z" fill="#3C6E47"/>
+        <path d="M15 27C15 20 15 12 20 6" stroke="#F5F7F1" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+      <div class="brand-text">
+        <h1>NutriFlow</h1>
+        <p>Lista de compras do seu plano alimentar</p>
+      </div>
+    </div>
+    <button class="settings-toggle" id="settingsToggle" type="button">Endereço da API</button>
+  </header>
+
+  <div class="settings-panel" id="settingsPanel">
+    <label for="apiBaseInput">Endereço da API (onde o backend está rodando)</label>
+    <input type="text" id="apiBaseInput" value="http://127.0.0.1:8000" spellcheck="false" />
+  </div>
+
+  <!-- ESTADO: sem plano carregado -->
+  <section id="uploadSection" class="panel dropzone">
+    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 15V3"/><path d="m7 8 5-5 5 5"/><path d="M20 21H4a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1h3"/><path d="M17 14h3a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-3"/>
+    </svg>
+    <h2>Envie seu plano alimentar</h2>
+    <p>Selecione o JSON exportado do seu plano (o mesmo formato gerado a<br class="hide-mobile"> partir do PDF do nutricionista).</p>
+    <button class="btn btn-primary" id="pickFileBtn" type="button">Selecionar arquivo JSON</button>
+    <input type="file" id="fileInput" accept="application/json,.json" />
+    <div class="inline-error" id="uploadError"></div>
+  </section>
+
+  <!-- ESTADO: plano carregado -->
+  <section id="planSection" style="display:none;">
+
+    <div class="plan-bar">
+      <div class="info">
+        <strong id="patientName">—</strong>
+        <span id="planMeta">—</span>
+      </div>
+      <button class="btn btn-text" id="changePlanBtn" type="button">Trocar plano</button>
+    </div>
+
+    <div class="controls">
+      <span class="stepper-label">Dias</span>
+      <div class="stepper">
+        <button type="button" id="daysMinus" aria-label="Diminuir dias">–</button>
+        <input type="number" id="daysInput" value="7" min="1" max="30" />
+        <button type="button" id="daysPlus" aria-label="Aumentar dias">+</button>
+      </div>
+      <button class="btn btn-primary" id="refreshBtn" type="button">Atualizar lista</button>
+
+      <div class="progress-block">
+        <div class="progress-text" id="progressText">0 de 0 itens marcados</div>
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      </div>
+    </div>
+
+    <div id="listContainer" class="list-container"></div>
+
+    <div class="inline-error" id="listError"></div>
+
+    <div class="export-row">
+      <button class="btn btn-secondary" id="copyTextBtn" type="button">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copiar lista
+      </button>
+      <button class="btn btn-secondary" id="downloadJsonBtn" type="button">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+        Baixar JSON
+      </button>
+    </div>
+
+  </section>
+
+  <footer>NutriFlow · MVP local · não substitui orientação nutricional</footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  const STORAGE_KEYS = {
+    apiBase: "nutriflow.apiBase",
+    planId: "nutriflow.planId",
+    patientName: "nutriflow.patientName",
+    mealsFound: "nutriflow.mealsFound",
+    days: "nutriflow.days",
+  };
+
+  const CATEGORY_ORDER = [
+    "proteínas", "carboidratos", "frutas",
+    "verduras e legumes", "laticínios", "gorduras", "outros",
+  ];
+  const CATEGORY_COLOR_VAR = {
+    "proteínas": "--cat-proteinas",
+    "carboidratos": "--cat-carboidratos",
+    "frutas": "--cat-frutas",
+    "verduras e legumes": "--cat-verduras",
+    "laticínios": "--cat-laticinios",
+    "gorduras": "--cat-gorduras",
+    "outros": "--cat-outros",
+  };
+
+  const el = (id) => document.getElementById(id);
+
+  const settingsToggle = el("settingsToggle");
+  const settingsPanel = el("settingsPanel");
+  const apiBaseInput = el("apiBaseInput");
+
+  const uploadSection = el("uploadSection");
+  const pickFileBtn = el("pickFileBtn");
+  const fileInput = el("fileInput");
+  const uploadError = el("uploadError");
+
+  const planSection = el("planSection");
+  const patientNameEl = el("patientName");
+  const planMetaEl = el("planMeta");
+  const changePlanBtn = el("changePlanBtn");
+
+  const daysInput = el("daysInput");
+  const daysMinus = el("daysMinus");
+  const daysPlus = el("daysPlus");
+  const refreshBtn = el("refreshBtn");
+
+  const progressText = el("progressText");
+  const progressFill = el("progressFill");
+
+  const listContainer = el("listContainer");
+  const listError = el("listError");
+
+  const copyTextBtn = el("copyTextBtn");
+  const downloadJsonBtn = el("downloadJsonBtn");
+
+  const toastEl = el("toast");
+
+  let currentCategories = null; // último resultado carregado da API
+
+  // ---------- utilidades ----------
+
+  function apiBase() {
+    return (apiBaseInput.value || "http://127.0.0.1:8000").replace(/\/+$/, "");
+  }
+
+  function showToast(message, isError) {
+    toastEl.textContent = message;
+    toastEl.classList.toggle("error", !!isError);
+    toastEl.classList.add("show");
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toastEl.classList.remove("show"), 3200);
+  }
+
+  function showError(node, message) {
+    if (!message) { node.classList.remove("show"); node.textContent = ""; return; }
+    node.textContent = message;
+    node.classList.add("show");
+  }
+
+  async function apiFetch(path, options) {
+    let response;
+    try {
+      response = await fetch(apiBase() + path, options);
+    } catch (err) {
+      throw new ApiError(
+        0,
+        "Não foi possível conectar à API em " + apiBase() +
+        ". Verifique se o servidor está rodando e se o endereço está correto."
+      );
+    }
+    return response;
+  }
+
+  class ApiError extends Error {
+    constructor(status, message) { super(message); this.status = status; }
+  }
+
+  function friendlyUploadError(status, detail) {
+    if (status === 422) return "Não foi possível ler esse arquivo. Confira se é um JSON de plano alimentar válido.";
+    if (status === 415) return "Formato de arquivo não suportado. Envie um arquivo .json.";
+    if (status === 501) return "Upload de PDF ainda não é suportado nesta versão. Envie o plano em formato JSON.";
+    return detail || "Não foi possível importar o plano. Tente novamente.";
+  }
+
+  // ---------- estado / persistência ----------
+
+  function loadStoredApiBase() {
+    const saved = localStorage.getItem(STORAGE_KEYS.apiBase);
+    if (saved) apiBaseInput.value = saved;
+  }
+  apiBaseInput.addEventListener("change", () => {
+    localStorage.setItem(STORAGE_KEYS.apiBase, apiBaseInput.value.trim());
+  });
+
+  function savePlan(planId, patientName, mealsFound) {
+    localStorage.setItem(STORAGE_KEYS.planId, planId);
+    localStorage.setItem(STORAGE_KEYS.patientName, patientName || "");
+    localStorage.setItem(STORAGE_KEYS.mealsFound, String(mealsFound));
+  }
+
+  function clearPlan() {
+    localStorage.removeItem(STORAGE_KEYS.planId);
+    localStorage.removeItem(STORAGE_KEYS.patientName);
+    localStorage.removeItem(STORAGE_KEYS.mealsFound);
+  }
+
+  function getStoredPlanId() {
+    return localStorage.getItem(STORAGE_KEYS.planId);
+  }
+
+  // ---------- telas ----------
+
+  function showUploadScreen() {
+    uploadSection.style.display = "block";
+    planSection.style.display = "none";
+    showError(uploadError, null);
+  }
+
+  function showPlanScreen(planId, patientName, mealsFound) {
+    uploadSection.style.display = "none";
+    planSection.style.display = "block";
+    patientNameEl.textContent = patientName || "Plano importado";
+    planMetaEl.textContent = mealsFound + " refeição(ões) encontradas";
+    planSection.dataset.planId = planId;
+  }
+
+  // ---------- upload ----------
+
+  pickFileBtn.addEventListener("click", () => fileInput.click());
+
+  ["dragover", "dragleave", "drop"].forEach((evt) => {
+    uploadSection.addEventListener(evt, (e) => {
+      e.preventDefault();
+      uploadSection.classList.toggle("drag", evt === "dragover");
+    });
+  });
+  uploadSection.addEventListener("drop", (e) => {
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file) handleUpload(file);
+  });
+
+  fileInput.addEventListener("change", () => {
+    const file = fileInput.files[0];
+    if (file) handleUpload(file);
+    fileInput.value = "";
+  });
+
+  async function handleUpload(file) {
+    showError(uploadError, null);
+    pickFileBtn.disabled = true;
+    pickFileBtn.textContent = "Enviando...";
+
+    const formData = new FormData();
+    formData.append("file", file, file.name || "plano.json");
+
+    try {
+      const response = await apiFetch("/api/v1/upload", { method: "POST", body: formData });
+      const body = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new ApiError(response.status, friendlyUploadError(response.status, body.detail));
+      }
+
+      savePlan(body.plan_id, body.patient_name, body.meals_found);
+      showPlanScreen(body.plan_id, body.patient_name, body.meals_found);
+      showToast(body.message || "Plano importado com sucesso");
+      loadShoppingList();
+    } catch (err) {
+      showError(uploadError, err.message);
+    } finally {
+      pickFileBtn.disabled = false;
+      pickFileBtn.textContent = "Selecionar arquivo JSON";
+    }
+  }
+
+  changePlanBtn.addEventListener("click", () => {
+    clearPlan();
+    currentCategories = null;
+    showUploadScreen();
+  });
+
+  // ---------- dias / lista ----------
+
+  function clampDays(value) {
+    let n = parseInt(value, 10);
+    if (isNaN(n)) n = 7;
+    return Math.min(30, Math.max(1, n));
+  }
+
+  daysMinus.addEventListener("click", () => {
+    daysInput.value = clampDays(Number(daysInput.value) - 1);
+  });
+  daysPlus.addEventListener("click", () => {
+    daysInput.value = clampDays(Number(daysInput.value) + 1);
+  });
+  daysInput.addEventListener("blur", () => {
+    daysInput.value = clampDays(daysInput.value);
+  });
+
+  refreshBtn.addEventListener("click", loadShoppingList);
+
+  async function loadShoppingList() {
+    const planId = getStoredPlanId();
+    if (!planId) return;
+
+    const days = clampDays(daysInput.value);
+    daysInput.value = days;
+    localStorage.setItem(STORAGE_KEYS.days, String(days));
+
+    showError(listError, null);
+    refreshBtn.disabled = true;
+    refreshBtn.textContent = "Calculando...";
+
+    try {
+      const response = await apiFetch(`/api/v1/shopping/${planId}?days=${days}`);
+      if (response.status === 404) {
+        clearPlan();
+        showUploadScreen();
+        showToast("Este plano não foi encontrado. Envie o arquivo novamente.", true);
+        return;
+      }
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new ApiError(response.status, body.detail || "Não foi possível calcular a lista.");
+      }
+
+      const body = await response.json();
+      currentCategories = body.categories;
+      renderList(body.categories, body.total_items);
+    } catch (err) {
+      showError(listError, err.message);
+    } finally {
+      refreshBtn.disabled = false;
+      refreshBtn.textContent = "Atualizar lista";
+    }
+  }
+
+  function renderList(categories, totalItems) {
+    listContainer.innerHTML = "";
+    listContainer.classList.remove("revealed");
+
+    const names = Object.keys(categories || {});
+    if (names.length === 0) {
+      listContainer.innerHTML = '<div class="empty-list">Nenhum item encontrado neste plano para o período selecionado.</div>';
+    } else {
+      names
+        .sort((a, b) => {
+          const ia = CATEGORY_ORDER.indexOf(a), ib = CATEGORY_ORDER.indexOf(b);
+          return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+        })
+        .forEach((category) => {
+          listContainer.appendChild(renderCategory(category, categories[category]));
+        });
+    }
+
+    updateProgress();
+    // uma única revelação orquestrada da lista inteira
+    requestAnimationFrame(() => listContainer.classList.add("revealed"));
+  }
+
+  function renderCategory(category, items) {
+    const section = document.createElement("div");
+    section.className = "category";
+    const colorVar = CATEGORY_COLOR_VAR[category] || "--cat-outros";
+    section.style.setProperty("--cat-color", `var(${colorVar})`);
+
+    const header = document.createElement("div");
+    header.className = "category-header";
+    header.innerHTML = `<h3>${escapeHtml(category)}</h3><span>${items.length} ${items.length === 1 ? "item" : "itens"}</span>`;
+    section.appendChild(header);
+
+    items.forEach((item) => section.appendChild(renderItemRow(item)));
+    return section;
+  }
+
+  function renderItemRow(item) {
+    const row = document.createElement("label");
+    row.className = "item-row" + (item.checked ? " checked" : "");
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = !!item.checked;
+    checkbox.addEventListener("change", () => toggleChecked(item.name, checkbox.checked, row));
+
+    const name = document.createElement("span");
+    name.className = "item-name";
+    name.textContent = item.name;
+
+    const suggestion = document.createElement("span");
+    suggestion.className = "item-suggestion";
+    suggestion.textContent = item.purchase_suggestion || "";
+
+    row.appendChild(checkbox);
+    row.appendChild(name);
+    row.appendChild(suggestion);
+    return row;
+  }
+
+  function updateProgress() {
+    if (!currentCategories) { progressText.textContent = "0 de 0 itens marcados"; progressFill.style.width = "0%"; return; }
+    const all = Object.values(currentCategories).flat();
+    const checked = all.filter((i) => i.checked).length;
+    progressText.textContent = `${checked} de ${all.length} itens marcados`;
+    progressFill.style.width = all.length ? `${(checked / all.length) * 100}%` : "0%";
+  }
+
+  async function toggleChecked(itemName, checked, rowEl) {
+    const planId = getStoredPlanId();
+    rowEl.classList.toggle("checked", checked);
+
+    // atualiza estado local otimisticamente
+    if (currentCategories) {
+      Object.values(currentCategories).flat().forEach((i) => {
+        if (i.name === itemName) i.checked = checked;
+      });
+      updateProgress();
+    }
+
+    try {
+      const response = await apiFetch(`/api/v1/checklist/${planId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ item_name: itemName, checked }),
+      });
+      if (!response.ok) throw new ApiError(response.status, "Não foi possível salvar essa marcação.");
+    } catch (err) {
+      // reverte em caso de falha
+      rowEl.classList.toggle("checked", !checked);
+      rowEl.querySelector('input[type="checkbox"]').checked = !checked;
+      if (currentCategories) {
+        Object.values(currentCategories).flat().forEach((i) => {
+          if (i.name === itemName) i.checked = !checked;
+        });
+        updateProgress();
+      }
+      showToast(err.message, true);
+    }
+  }
+
+  // ---------- exportação ----------
+
+  copyTextBtn.addEventListener("click", async () => {
+    const planId = getStoredPlanId();
+    const days = clampDays(daysInput.value);
+    try {
+      const response = await apiFetch(`/api/v1/shopping/${planId}/export?days=${days}&fmt=text`);
+      if (!response.ok) throw new ApiError(response.status, "Não foi possível gerar a lista em texto.");
+      const text = await response.text();
+      await navigator.clipboard.writeText(text);
+      showToast("Lista copiada para a área de transferência");
+    } catch (err) {
+      showToast(err.message || "Não foi possível copiar a lista.", true);
+    }
+  });
+
+  downloadJsonBtn.addEventListener("click", async () => {
+    const planId = getStoredPlanId();
+    const days = clampDays(daysInput.value);
+    try {
+      const response = await apiFetch(`/api/v1/shopping/${planId}/export?days=${days}&fmt=json`);
+      if (!response.ok) throw new ApiError(response.status, "Não foi possível gerar o JSON.");
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `lista-de-compras-${days}dias.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      showToast(err.message || "Não foi possível baixar o JSON.", true);
+    }
+  });
+
+  // ---------- helpers ----------
+
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  settingsToggle.addEventListener("click", () => settingsPanel.classList.toggle("open"));
+
+  // ---------- inicialização ----------
+
+  loadStoredApiBase();
+
+  const storedDays = localStorage.getItem(STORAGE_KEYS.days);
+  if (storedDays) daysInput.value = clampDays(storedDays);
+
+  const storedPlanId = getStoredPlanId();
+  if (storedPlanId) {
+    showPlanScreen(
+      storedPlanId,
+      localStorage.getItem(STORAGE_KEYS.patientName),
+      localStorage.getItem(STORAGE_KEYS.mealsFound)
+    );
+    loadShoppingList();
+  } else {
+    showUploadScreen();
+  }
+})();
+</script>
+</body>
+</html>

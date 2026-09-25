@@ -23,9 +23,19 @@ futuro) deve ser normalizado para os tipos abaixo antes de chegar ao
 """
 
 from __future__ import annotations
+
 import sys
 from pathlib import Path
 
+# scrap_do_pdf.py fica na raiz do repositório, fora do pacote "app". Quando
+# a API é iniciada com `uvicorn app.main:app --app-dir backend` (ou com
+# `--reload`, que reinicia o processo), apenas a pasta "backend" entra no
+# sys.path — a raiz do repositório não entra automaticamente, e o import
+# abaixo falha com "ModuleNotFoundError: No module named 'scrap_do_pdf'".
+#
+# Para não depender de como o processo é lançado (uvicorn direto,
+# `python -m uvicorn`, com ou sem --reload, pytest, etc.), garantimos aqui
+# que a raiz do repositório esteja no sys.path antes de importar.
 _REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
