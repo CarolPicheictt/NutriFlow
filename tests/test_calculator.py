@@ -2,18 +2,7 @@
 
 """Testes do ShoppingCalculator com dados reais do PDF."""
 
-import pytest
-from app.core.shopping.calculator import ShoppingCalculator, UnitType
-from app.core.models.diet_plan import DietPlan
-import json
-from pathlib import Path
-
-
-@pytest.fixture
-def real_diet_plan() -> DietPlan:
-    """Carrega o DietPlan gerado pelo parser do PDF real."""
-    json_path = Path("tests/fixtures/carolina_diet.json")
-    return DietPlan.model_validate_json(json_path.read_text())
+from app.core.shopping.calculator import ShoppingCalculator
 
 
 def test_calculator_returns_items(real_diet_plan):
