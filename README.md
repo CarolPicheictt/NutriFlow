@@ -31,6 +31,7 @@ Este README cobre o que **existe e funciona hoje**.
 | Checklist (marcar/desmarcar item como "já tenho em casa") | `PATCH /api/v1/checklist/{plan_id}` |
 | Exportar lista em texto (compartilhável) ou JSON | `GET /api/v1/shopping/{plan_id}/export` |
 | Armazenamento em memória, pronto para trocar por banco depois | `services/plan_service.py`, `services/shopping_service.py` |
+| Interface web para usar todo o fluxo (upload, checklist, export) | `frontend/index.html` |
 | Parser de PDF do WebDiet → JSON (script separado, tratado como dependência externa) | `scrap_do_pdf.py` |
 | Testes automatizados (núcleo + rotas) | `tests/` |
 
@@ -60,6 +61,10 @@ NutriFlow/
 ├── scrap_do_pdf.py              # Parser do PDF do WebDiet → DietPlan (dependência externa)
 ├── requirements.txt
 ├── pytest.ini
+├── frontend/
+│   └── index.html               # Interface web (HTML/CSS/JS puro, sem build)
+├── docs/
+│   └── brainstorm-produto.md    # Ideação de produto/negócio original
 ├── backend/
 │   └── app/
 │       ├── main.py              # Entrypoint FastAPI
@@ -174,6 +179,27 @@ JSON estruturado:
 ```bash
 curl "http://127.0.0.1:8000/api/v1/shopping/{plan_id}/export?days=7&fmt=json"
 ```
+
+---
+
+## Front-end
+
+Em vez de usar `curl`, você pode usar a interface web em
+[`frontend/index.html`](frontend/index.html) — um único arquivo HTML, sem
+build nem dependências, que cobre todo o fluxo acima (upload, dias,
+checklist com progresso, copiar/baixar a lista).
+
+1. Suba a API normalmente (passo 3 acima). Ela já vem com CORS liberado
+   para uso local.
+2. Abra `frontend/index.html` diretamente no navegador (duplo clique) —
+   ou sirva a pasta com `python -m http.server 5500` dentro de `frontend/`
+   e acesse `http://localhost:5500`.
+3. Se a API não estiver em `http://127.0.0.1:8000`, ajuste o endereço no
+   link "Endereço da API" no topo da página.
+
+O plano importado e o número de dias ficam salvos no navegador
+(`localStorage`), então recarregar a página não perde o progresso do
+checklist.
 
 ---
 
