@@ -145,8 +145,36 @@
   .dropzone p {
     color: var(--muted);
     font-size: 14px;
-    margin: 0 0 18px;
+    margin: 0 0 16px;
     line-height: 1.5;
+  }
+
+  .upload-tabs {
+    display: inline-flex;
+    padding: 3px;
+    margin: 8px 0 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .upload-tab {
+    min-width: 84px;
+    padding: 7px 14px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--muted);
+    font: 500 13px var(--sans);
+    cursor: pointer;
+  }
+  .upload-tab.active {
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: 0 1px 3px rgb(31 46 35 / 12%);
+  }
+  .upload-tab:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
   }
 
   input[type="file"] { display: none; }

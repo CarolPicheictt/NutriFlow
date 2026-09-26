@@ -6,6 +6,8 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
+from app.services.plan_service import FilePlanRepository
+
 MISSING_PLAN_ID = "00000000-0000-0000-0000-000000000000"
 
 
@@ -30,12 +32,31 @@ def test_upload_rejects_invalid_json(client: TestClient):
     assert response.status_code == 422
 
 
-def test_upload_pdf_is_not_yet_implemented(client: TestClient):
+def test_upload_pdf_parses_and_stores_plan(client: TestClient):
+    from pathlib import Path
+
+    pdf_path = Path(__file__).parent / "Plano alimentar - Carolina Picheictt.pdf"
     response = client.post(
         "/api/v1/upload",
-        files={"file": ("plan.pdf", b"%PDF-1.4 fake", "application/pdf")},
+        files={"file": (pdf_path.name, pdf_path.read_bytes(), "application/pdf")},
     )
-    assert response.status_code == 501
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["patient_name"] == "Carolina Picheictt"
+    assert body["meals_found"] > 0
+
+    meals_response = client.get(f"/api/v1/plans/{body['plan_id']}/meals")
+    assert meals_response.status_code == 200
+    assert meals_response.json()["meals"]
+
+
+def test_file_plan_repository_survives_recreation(real_diet_plan, tmp_path):
+    plan_id = FilePlanRepository(tmp_path).save(real_diet_plan)
+
+    restored_plan = FilePlanRepository(tmp_path).get(plan_id)
+
+    assert restored_plan == real_diet_plan
+    assert (tmp_path / f"{plan_id}.json").is_file()
 
 
 def test_shopping_list_for_missing_plan_returns_404(client: TestClient):

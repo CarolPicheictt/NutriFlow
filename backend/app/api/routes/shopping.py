@@ -21,7 +21,6 @@ from app.api.dependencies import get_plan_service, get_shopping_service
 from app.core.models.shopping_list import ShoppingItem
 from app.services.plan_service import (
     InvalidDietPlanError,
-    PDFUploadNotSupportedError,
     PlanService,
 )
 from app.services.shopping_service import ShoppingService
@@ -77,8 +76,7 @@ async def upload_diet(
 
     Aceita:
         - application/json (suportado nesta versão)
-        - application/pdf (a camada já está preparada, mas a extração real
-          via ``WebDietParser`` ainda não está ligada a este endpoint)
+                - application/pdf (extraído pelo ``WebDietParser``)
 
     Returns:
         ``UploadResponse`` com o ID do plano criado.
@@ -94,8 +92,6 @@ async def upload_diet(
 
     try:
         plan_id, diet_plan = await service.process_upload(content, file.content_type)
-    except PDFUploadNotSupportedError as exc:
-        raise HTTPException(status_code=501, detail=str(exc)) from exc
     except InvalidDietPlanError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

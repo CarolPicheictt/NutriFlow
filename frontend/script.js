@@ -34,6 +34,9 @@
   const pickFileBtn = el("pickFileBtn");
   const fileInput = el("fileInput");
   const uploadError = el("uploadError");
+  const jsonTab = el("jsonTab");
+  const pdfTab = el("pdfTab");
+  const uploadDescription = el("uploadDescription");
 
   const planSection = el("planSection");
   const patientNameEl = el("patientName");
@@ -64,6 +67,7 @@
   let currentCategories = null; // último resultado carregado da API
   let availableMeals = [];
   let selectedMeals = [];
+  let uploadMode = "json";
 
   // ---------- utilidades ----------
 
@@ -104,9 +108,10 @@
   }
 
   function friendlyUploadError(status, detail) {
-    if (status === 422) return "Não foi possível ler esse arquivo. Confira se é um JSON de plano alimentar válido.";
-    if (status === 415) return "Formato de arquivo não suportado. Envie um arquivo .json.";
-    if (status === 501) return "Upload de PDF ainda não é suportado nesta versão. Envie o plano em formato JSON.";
+    if (status === 422) return uploadMode === "pdf"
+      ? "Não foi possível processar este PDF. Confira se é um plano alimentar exportado pelo WebDiet."
+      : "Não foi possível ler esse arquivo. Confira se é um JSON de plano alimentar válido.";
+    if (status === 415) return `Formato incompatível. Selecione um arquivo .${uploadMode}.`;
     return detail || "Não foi possível importar o plano. Tente novamente.";
   }
 
@@ -157,6 +162,23 @@
 
   // ---------- upload ----------
 
+  function setUploadMode(mode) {
+    uploadMode = mode;
+    const isPdf = mode === "pdf";
+    jsonTab.classList.toggle("active", !isPdf);
+    pdfTab.classList.toggle("active", isPdf);
+    jsonTab.setAttribute("aria-selected", String(!isPdf));
+    pdfTab.setAttribute("aria-selected", String(isPdf));
+    fileInput.accept = isPdf ? "application/pdf,.pdf" : "application/json,.json";
+    pickFileBtn.textContent = isPdf ? "Selecionar arquivo PDF" : "Selecionar arquivo JSON";
+    uploadDescription.textContent = isPdf
+      ? "Envie o PDF do plano alimentar exportado pelo WebDiet."
+      : "Selecione o arquivo JSON do seu plano alimentar.";
+    showError(uploadError, null);
+  }
+
+  jsonTab.addEventListener("click", () => setUploadMode("json"));
+  pdfTab.addEventListener("click", () => setUploadMode("pdf"));
   pickFileBtn.addEventListener("click", () => fileInput.click());
 
   ["dragover", "dragleave", "drop"].forEach((evt) => {
@@ -178,11 +200,18 @@
 
   async function handleUpload(file) {
     showError(uploadError, null);
+    const expectedExtension = `.${uploadMode}`;
+    if (!file.name.toLowerCase().endsWith(expectedExtension)) {
+      showError(uploadError, `O formato selecionado é ${uploadMode.toUpperCase()}. Escolha um arquivo ${expectedExtension}.`);
+      return;
+    }
+
     pickFileBtn.disabled = true;
     pickFileBtn.textContent = "Enviando...";
 
     const formData = new FormData();
-    formData.append("file", file, file.name || "plano.json");
+    const contentType = uploadMode === "pdf" ? "application/pdf" : "application/json";
+    formData.append("file", new File([file], file.name, { type: contentType }));
 
     try {
       const response = await apiFetch("/api/v1/upload", { method: "POST", body: formData });
@@ -201,7 +230,7 @@
       showError(uploadError, err.message);
     } finally {
       pickFileBtn.disabled = false;
-      pickFileBtn.textContent = "Selecionar arquivo JSON";
+      pickFileBtn.textContent = `Selecionar arquivo ${uploadMode.toUpperCase()}`;
     }
   }
 

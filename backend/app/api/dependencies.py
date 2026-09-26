@@ -5,20 +5,16 @@ dependencies.py
 
 Injeção de dependências da API.
 
-Para o MVP, os serviços são singletons de processo (o armazenamento é em
-memória, então uma única instância precisa ser compartilhada entre as
-requisições). Quando o armazenamento em memória for substituído por
-PostgreSQL, estas funções passam a construir os serviços com um
-repositório real (ex.: uma sessão de banco por requisição), sem exigir
-mudanças nas rotas que os consomem via ``Depends``.
+Os planos são salvos em arquivos JSON e o checklist é mantido em memória.
+Os serviços permanecem compartilhados entre as requisições do processo.
 """
 
 from __future__ import annotations
 
-from app.services.plan_service import InMemoryPlanRepository, PlanService
+from app.services.plan_service import FilePlanRepository, PlanService
 from app.services.shopping_service import InMemoryChecklistRepository, ShoppingService
 
-_plan_service = PlanService(InMemoryPlanRepository())
+_plan_service = PlanService(FilePlanRepository())
 _shopping_service = ShoppingService(
     plan_service=_plan_service,
     checklist_repository=InMemoryChecklistRepository(),

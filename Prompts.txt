@@ -18,3 +18,5 @@ Em ingredientes como o Atum, o ingrediente só passa a ter o seu volume recalcul
 
 - Sunday meal prep: os cálculos devem considerar que x gramas de frango pronto são y gramas de frango cru.
 - Indicação de preparação das refeições
+
+ajustar a interface para: A quantidade (total_quantity) escala corretamente a cada dia (40g → 80g → ... → 280g no dia 7), mas a sugestão de compra arredonda para embalagens comerciais (250g, 500g, 1kg...), então ela só "salta" quando a quantidade cruza um degrau — por isso parecia travada até o dia 7. Corrigi a percepção mostrando na interface tanto o valor exato quanto a sugestão: "280g · compre ~500g".

@@ -30,16 +30,13 @@ Este README cobre o que **existe e funciona hoje**.
 | Sugestão de compra humanizada (ex.: "42 unidades (3 dúzias + 6)", "~500g") | `core/shopping/calculator.py` |
 | Checklist (marcar/desmarcar item como "já tenho em casa") | `PATCH /api/v1/checklist/{plan_id}` |
 | Exportar lista em texto (compartilhável) ou JSON | `GET /api/v1/shopping/{plan_id}/export` |
-| Armazenamento em memória, pronto para trocar por banco depois | `services/plan_service.py`, `services/shopping_service.py` |
+| Persistência de planos em JSON (`data/plans/`) e checklist em memória | `services/plan_service.py`, `services/shopping_service.py` |
 | Interface web para usar todo o fluxo (upload, checklist, export) | `frontend/index.html` |
-| Parser de PDF do WebDiet → JSON (script separado, tratado como dependência externa) | `scrap_do_pdf.py` |
+| Upload de PDF do WebDiet e conversão direta para plano alimentar | `scrap_do_pdf.py`, `services/plan_service.py` |
 | Testes automatizados (núcleo + rotas) | `tests/` |
 
 ### ❌ Não implementado (fora de escopo desta etapa)
 
-- Upload de PDF diretamente pela API (a rota já valida e retorna `501`,
-  mas a extração real ainda não está ligada — o parser existe em
-  `scrap_do_pdf.py` e pode ser plugado depois)
 - Integração real com o WebDiet (API oficial)
 - Integração com supermercados / finalizar compra
 - Estimativa de preços
@@ -48,8 +45,8 @@ Este README cobre o que **existe e funciona hoje**.
 - Machine learning / recomendações
 - Autenticação de usuários
 - Aplicativo mobile
-- Persistência real (PostgreSQL, Redis) — hoje tudo é em memória e
-  **reseta quando o processo reinicia**
+- Persistência do checklist entre reinícios (os planos são salvos em JSON;
+  o checklist ainda é mantido em memória)
 - Pagamentos / assinaturas
 
 ---
@@ -205,10 +202,9 @@ checklist.
 
 ## Observações importantes
 
-- **Sem persistência real**: os planos e o checklist vivem em memória do
-  processo. Reiniciar a API apaga tudo. As interfaces (`PlanRepository`,
-  `ChecklistRepository`) já estão desenhadas para permitir trocar por
-  PostgreSQL sem alterar os serviços ou as rotas.
+- **Persistência parcial**: os planos ficam em `data/plans/` e sobrevivem
+  ao reinício da API. O checklist ainda vive em memória e é reiniciado com
+  o processo.
 - **Unidades incompatíveis não são somadas**: se o mesmo alimento aparecer
   como "100 g" numa refeição e "2 unidades" em outra, o NutriFlow mantém
   a primeira quantidade e não faz uma soma sem sentido — isso é

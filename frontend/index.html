@@ -7,8 +7,8 @@
 <link rel="icon" href="data:," />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
-<script src="script.js" defer></script>
+<link rel="stylesheet" href="style.css?v=2">
+<script src="script.js?v=2" defer></script>
 </head>
 <body>
 <div class="wrap">
@@ -38,7 +38,11 @@
       <path d="M12 15V3"/><path d="m7 8 5-5 5 5"/><path d="M20 21H4a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1h3"/><path d="M17 14h3a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-3"/>
     </svg>
     <h2>Envie seu plano alimentar</h2>
-    <p>Selecione o JSON exportado do seu plano (o mesmo formato gerado a<br class="hide-mobile"> partir do PDF do nutricionista).</p>
+    <div class="upload-tabs" role="tablist" aria-label="Formato do plano">
+      <button class="upload-tab active" id="jsonTab" type="button" role="tab" aria-selected="true">JSON</button>
+      <button class="upload-tab" id="pdfTab" type="button" role="tab" aria-selected="false">PDF</button>
+    </div>
+    <p id="uploadDescription">Selecione o arquivo JSON do seu plano alimentar.</p>
     <button class="btn btn-primary" id="pickFileBtn" type="button">Selecionar arquivo JSON</button>
     <input type="file" id="fileInput" accept="application/json,.json" />
     <div class="inline-error" id="uploadError"></div>

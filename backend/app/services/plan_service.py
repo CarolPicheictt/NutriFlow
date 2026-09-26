@@ -1,35 +1,25 @@
 # backend/app/services/plan_service.py
-
 """
 plan_service.py
 
-Orquestra o recebimento e o armazenamento de planos alimentares.
+Orquestra a conversão e o armazenamento de planos alimentares.
 
-O armazenamento é em memória para o MVP, mas fica atrás de uma interface
-(``PlanRepository``) para que possa ser substituído por um repositório
-com PostgreSQL no futuro sem alterar o serviço nem as rotas da API.
+O serviço usa a interface ``PlanRepository`` para suportar armazenamento
+em arquivo ou em memória durante os testes.
 """
 
 from __future__ import annotations
 
 import json
+import tempfile
+from pathlib import Path
 from typing import Optional, Protocol
 from uuid import UUID, uuid4
 
 from pydantic import ValidationError
 
 from app.core.models.diet_plan import DietPlan
-
-
-class PDFUploadNotSupportedError(NotImplementedError):
-    """
-    Levantado quando o upload de um PDF é recebido.
-
-    O MVP atual só processa planos alimentares em JSON. A camada já está
-    preparada para receber PDFs (ver ``PlanService.process_upload``), mas a
-    extração real via ``WebDietParser`` (``scrap_do_pdf.py``) será ligada em
-    uma etapa futura.
-    """
+from scrap_do_pdf import WebDietParser
 
 
 class InvalidDietPlanError(ValueError):
@@ -82,6 +72,33 @@ class InMemoryPlanRepository:
         return plan_id in self._plans
 
 
+class FilePlanRepository:
+    """Armazena planos como arquivos JSON identificados por UUID."""
+
+    def __init__(self, storage_dir: Path | None = None) -> None:
+        repo_root = Path(__file__).resolve().parents[3]
+        self._storage_dir = storage_dir or repo_root / "data" / "plans"
+
+    def save(self, diet_plan: DietPlan) -> UUID:
+        plan_id = uuid4()
+        self._storage_dir.mkdir(parents=True, exist_ok=True)
+        plan_path = self._path_for(plan_id)
+        plan_path.write_text(diet_plan.model_dump_json(indent=2), encoding="utf-8")
+        return plan_id
+
+    def get(self, plan_id: UUID) -> Optional[DietPlan]:
+        plan_path = self._path_for(plan_id)
+        if not plan_path.is_file():
+            return None
+        return DietPlan.model_validate_json(plan_path.read_text(encoding="utf-8"))
+
+    def exists(self, plan_id: UUID) -> bool:
+        return self._path_for(plan_id).is_file()
+
+    def _path_for(self, plan_id: UUID) -> Path:
+        return self._storage_dir / f"{plan_id}.json"
+
+
 class PlanService:
     """
     Serviço de aplicação responsável por receber e armazenar planos
@@ -114,20 +131,31 @@ class PlanService:
         Raises:
             InvalidDietPlanError: O conteúdo não é um JSON válido, ou não
                 corresponde ao formato de ``DietPlan``.
-            PDFUploadNotSupportedError: O upload é um PDF. O parser
-                (``scrap_do_pdf.WebDietParser``) já existe no repositório,
-                mas a ligação com este endpoint fica para uma etapa futura.
         """
         if content_type == "application/pdf":
-            raise PDFUploadNotSupportedError(
-                "Upload de PDF ainda não é suportado nesta versão do MVP. "
-                "Envie o plano já convertido em JSON (ex.: exportado pelo "
-                "parser do WebDiet)."
-            )
+            diet_plan = self._parse_pdf_plan(content)
+        else:
+            diet_plan = self._parse_json_plan(content)
 
-        diet_plan = self._parse_json_plan(content)
         plan_id = self._repository.save(diet_plan)
         return plan_id, diet_plan
+
+    @staticmethod
+    def _parse_pdf_plan(content: bytes) -> DietPlan:
+        """Executa o parser WebDiet em um arquivo temporário e limpa-o."""
+        temporary_path: Path | None = None
+        try:
+            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as pdf_file:
+                pdf_file.write(content)
+                temporary_path = Path(pdf_file.name)
+            return WebDietParser(temporary_path).parse()
+        except Exception as exc:
+            raise InvalidDietPlanError(
+                f"Não foi possível processar o PDF do plano alimentar: {exc}"
+            ) from exc
+        finally:
+            if temporary_path is not None:
+                temporary_path.unlink(missing_ok=True)
 
     def get_plan(self, plan_id: UUID) -> Optional[DietPlan]:
         """Retorna o plano armazenado, ou ``None`` se não existir."""
