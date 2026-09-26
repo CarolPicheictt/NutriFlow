@@ -7,8 +7,8 @@
 <link rel="icon" href="data:," />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=2">
-<script src="script.js?v=2" defer></script>
+<link rel="stylesheet" href="style.css?v=6">
+<script src="script.js?v=6" defer></script>
 </head>
 <body>
 <div class="wrap">
@@ -80,7 +80,7 @@
       <span class="stepper-label">Dias</span>
       <div class="stepper">
         <button type="button" id="daysMinus" aria-label="Diminuir dias">–</button>
-        <input type="number" id="daysInput" value="7" min="1" max="30" />
+        <input type="number" id="daysInput" value="7" min="1" max="31" />
         <button type="button" id="daysPlus" aria-label="Aumentar dias">+</button>
       </div>
       <button class="btn btn-primary" id="refreshBtn" type="button">Atualizar lista</button>
@@ -91,6 +91,9 @@
       </div>
     </div>
 
+    <div class="shopping-heading">
+      <h2 id="shoppingHeading">Lista de compras para 7 dias</h2>
+    </div>
     <div id="listContainer" class="list-container"></div>
 
     <div class="inline-error" id="listError"></div>

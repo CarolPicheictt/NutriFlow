@@ -16,6 +16,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from pydantic import BaseModel
+from starlette.responses import PlainTextResponse
 
 from app.api.dependencies import get_plan_service, get_shopping_service
 from app.core.models.shopping_list import ShoppingItem
@@ -118,7 +119,7 @@ async def get_plan_meals(
 @router.get("/shopping/{plan_id}", response_model=ShoppingListResponse)
 async def get_shopping_list(
     plan_id: UUID,
-    days: int = Query(7, ge=1, le=30),
+    days: int = Query(7, ge=1, le=31),
     meal_names: list[str] | None = Query(None),
     service: ShoppingService = Depends(get_shopping_service),
 ) -> ShoppingListResponse:
@@ -127,7 +128,7 @@ async def get_shopping_list(
 
     Args:
         plan_id: ID do plano alimentar importado.
-        days: Número de dias para calcular (entre 1 e 30).
+        days: Número de dias para calcular (entre 1 e 31).
 
     Returns:
         ``ShoppingListResponse`` com itens agrupados por categoria.
@@ -171,7 +172,7 @@ async def update_checklist(
 @router.get("/shopping/{plan_id}/export")
 async def export_shopping_list(
     plan_id: UUID,
-    days: int = Query(7, ge=1, le=30),
+    days: int = Query(7, ge=1, le=31),
     fmt: str = Query("text", pattern="^(text|json)$"),
     meal_names: list[str] | None = Query(None),
     service: ShoppingService = Depends(get_shopping_service),
@@ -191,5 +192,7 @@ async def export_shopping_list(
     result = await service.export_list(plan_id, days, fmt, meal_names)
     if result is None:
         raise HTTPException(status_code=404, detail="Plano não encontrado.")
+    if fmt == "text":
+        return PlainTextResponse(str(result))
 
     return result

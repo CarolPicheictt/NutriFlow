@@ -22,7 +22,7 @@ Este README cobre o que **existe e funciona hoje**.
 | Funcionalidade | Onde |
 |---|---|
 | Receber plano alimentar em JSON | `POST /api/v1/upload` |
-| Calcular lista de compras para N dias (1 a 30) | `GET /api/v1/shopping/{plan_id}` |
+| Calcular lista de compras para N dias (1 a 31) | `GET /api/v1/shopping/{plan_id}` |
 | Consolidar alimentos duplicados entre refeições | `core/shopping/consolidator.py` |
 | Normalizar nomes (lowercase, remover qualificadores como "cozido", "light" etc.) | `core/shopping/consolidator.py` |
 | Classificar/converter unidades (g, kg, ml, l, unidade, "à vontade") | `core/shopping/units.py` |
@@ -150,7 +150,7 @@ Retorna os itens já consolidados, escalonados para 7 dias e agrupados por
 categoria (`proteínas`, `carboidratos`, `frutas`, `verduras e legumes`,
 `laticínios`, `gorduras`, `outros`).
 
-`days` aceita valores entre 1 e 30 — fora disso a API responde `422`.
+`days` aceita valores entre 1 e 31 — fora disso a API responde `422`.
 
 ### 6. Marcar um item como "já tenho em casa"
 

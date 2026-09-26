@@ -1,22 +1,27 @@
-#Adição de Feature 1
-Adicione mais uma tela que eu possa subir o meu pdf de plano alimentar e ele use o scrap_do_pdf.py para fazer o processamento e transformação em json, armazenando em uma pasta adequada e já indo direto para a lista de compras inteligente.
-
-#Adição de Feature 2
-Sobre este protótipo de interface preciso que eu possa selecionar as refeições que eu quero que os alimentos entrem na lista, por exemplo, posso querer ver quais os ingredientes apenas do café da manhã e do pré-treino e quero que essa seleção seja feita pelo usuário. A aba de seleção pode vir dentro do mesmo container onde estão totalizados quantas refeições foram encontradas.
-
-#Ajuste
-O ultimo campo que tem outros não está fazendo sentido por não estar bem explicativo e por "Almoço 42.2g 20.1g 63.5g" não significar nada especifico para o usuário. O nome das refeições não deve ser tratado como ingrediente.
-
-#Duvida 
-Em ingredientes como o Atum, o ingrediente só passa a ter o seu volume recalculado a partir do sétimo dia, isso está correto?
 
 - Adicione um cabeçalho maior que indique para quantos dias aquela lista está sendo calculada.
--Crie a funcionalidade de adicionar mais de um arquivo (duas pessoas diferentes que moram na mesma casa mas que fazem a compra juntas devem poder agrupar suas compras então cria o modo para que duas eu possa subir duas dietas e no momento do cálculo dos ingredientes para comprar, elas se somem)
 - Trate whey e demais suplementos em uma outra categoria: Suplementos
 - Faça com que o botão de copiar lista já traga o texto formatado com os itens de markdown do whatsapp.
 - considere que o número de dias pode ir até 31 dias e não apenas até 30
+
+
+
+- Crie a funcionalidade de adicionar mais de um arquivo (duas pessoas diferentes que moram na mesma casa mas fazem a compra do mercado juntas e devem poder agrupar suas compras então crie o modo para que duas pessoas possam subir mais de uma dieta e no momento do cálculo dos ingredientes para comprar, elas se somem)
 
 - Sunday meal prep: os cálculos devem considerar que x gramas de frango pronto são y gramas de frango cru.
 - Indicação de preparação das refeições
 
 ajustar a interface para: A quantidade (total_quantity) escala corretamente a cada dia (40g → 80g → ... → 280g no dia 7), mas a sugestão de compra arredonda para embalagens comerciais (250g, 500g, 1kg...), então ela só "salta" quando a quantidade cruza um degrau — por isso parecia travada até o dia 7. Corrigi a percepção mostrando na interface tanto o valor exato quanto a sugestão: "280g · compre ~500g".
+
+- Suplemetos devem ter medidas padrão de pacotes de:
+1. Monodose / Sachê Individual (30g)
+2. Pote Pequeno / Edição de Entrada (500g)
+3. Padrão Clássico / Pouch e Pote Intermediário (900g)
+4. Pacotes Econômicos / Tamanho Família (2,0kg)
+5. Mega Tamanhos / Atacado (4,5kg ou mais)
+
+cada dose de whey deve ser considerada como 1 scoop de 30 gramas, se a dieta indicar que o paciente deve tomar 15gramas, indique 15g mas indique também que isso equivale a meio scoop
+-quando estiver falando sobre a quantidade de carnes, coloque sempre a quantidade emm unidade e · compre x gramas ou kg
+Padronize para que 100g seja reconhecido como 1kg em todos os cenários.
+Para medidas de pão considere que as unidades são fatias
+

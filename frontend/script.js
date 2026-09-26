@@ -11,10 +11,11 @@
   };
 
   const CATEGORY_ORDER = [
-    "proteínas", "carboidratos", "frutas",
+    "suplementos", "proteínas", "carboidratos", "frutas",
     "verduras e legumes", "laticínios", "gorduras", "outros",
   ];
   const CATEGORY_COLOR_VAR = {
+    "suplementos": "--cat-suplementos",
     "proteínas": "--cat-proteinas",
     "carboidratos": "--cat-carboidratos",
     "frutas": "--cat-frutas",
@@ -57,6 +58,7 @@
   const progressFill = el("progressFill");
 
   const listContainer = el("listContainer");
+  const shoppingHeading = el("shoppingHeading");
   const listError = el("listError");
 
   const copyTextBtn = el("copyTextBtn");
@@ -245,7 +247,7 @@
   function clampDays(value) {
     let n = parseInt(value, 10);
     if (isNaN(n)) n = 7;
-    return Math.min(30, Math.max(1, n));
+    return Math.min(31, Math.max(1, n));
   }
 
   daysMinus.addEventListener("click", () => {
@@ -361,7 +363,7 @@
 
       const body = await response.json();
       currentCategories = body.categories;
-      renderList(body.categories, body.total_items);
+      renderList(body.categories, body.total_items, body.days);
     } catch (err) {
       showError(listError, err.message);
     } finally {
@@ -379,7 +381,8 @@
     return params;
   }
 
-  function renderList(categories, totalItems) {
+  function renderList(categories, totalItems, days) {
+    shoppingHeading.textContent = `Lista de compras para ${days} ${days === 1 ? "dia" : "dias"}`;
     listContainer.innerHTML = "";
     listContainer.classList.remove("revealed");
 
@@ -430,14 +433,48 @@
     name.className = "item-name";
     name.textContent = item.name;
 
-    const suggestion = document.createElement("span");
-    suggestion.className = "item-suggestion";
-    suggestion.textContent = item.purchase_suggestion || "";
+    const details = document.createElement("span");
+    details.className = "item-details";
+
+    const exactQuantity = formatExactQuantity(item);
+    const purchaseSuggestion = item.purchase_suggestion || "";
+    if (exactQuantity) {
+      const quantity = document.createElement("span");
+      quantity.className = "item-quantity";
+      quantity.textContent = exactQuantity;
+      details.appendChild(quantity);
+    }
+    if (purchaseSuggestion) {
+      if (exactQuantity) {
+        const separator = document.createElement("span");
+        separator.className = "item-separator";
+        separator.setAttribute("aria-hidden", "true");
+        separator.textContent = "·";
+        details.appendChild(separator);
+      }
+      const suggestion = document.createElement("span");
+      suggestion.className = "item-suggestion";
+      suggestion.textContent = exactQuantity
+        ? `compre ${purchaseSuggestion}`
+        : purchaseSuggestion;
+      details.appendChild(suggestion);
+    }
 
     row.appendChild(checkbox);
     row.appendChild(name);
-    row.appendChild(suggestion);
+    row.appendChild(details);
     return row;
+  }
+
+  function formatExactQuantity(item) {
+    if (item.unit_type === "free") return "";
+
+    const quantity = new Intl.NumberFormat("pt-BR", {
+      maximumFractionDigits: 1,
+    }).format(item.total_quantity);
+    const unit = (item.unit || "").trim();
+    if (!unit) return quantity;
+    return unit === "g" || unit === "ml" ? `${quantity}${unit}` : `${quantity} ${unit}`;
   }
 
   function updateProgress() {

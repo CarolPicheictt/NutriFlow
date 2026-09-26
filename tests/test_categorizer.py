@@ -13,6 +13,8 @@ def test_known_categories_are_detected():
     assert categorizer.categorize("brócolis") == "verduras e legumes"
     assert categorizer.categorize("leite integral") == "laticínios"
     assert categorizer.categorize("azeite de oliva") == "gorduras"
+    assert categorizer.categorize("Whey protein") == "suplementos"
+    assert categorizer.categorize("Creatina monohidratada") == "suplementos"
 
 
 def test_unknown_food_falls_back_to_outros():

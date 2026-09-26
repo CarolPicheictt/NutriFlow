@@ -19,6 +19,7 @@
     --cat-laticinios: #5E85AC;
     --cat-gorduras: #957A3E;
     --cat-outros: #8C8577;
+    --cat-suplementos: #277C74;
 
     --serif: 'Fraunces', Georgia, serif;
     --sans: 'IBM Plex Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
@@ -335,6 +336,18 @@
   }
 
   /* ---------- Category sections ---------- */
+  .shopping-heading {
+    margin: 28px 0 12px;
+  }
+  .shopping-heading h2 {
+    margin: 0;
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 26px;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
   .list-container {
     opacity: 0;
     transform: translateY(6px);
@@ -375,7 +388,8 @@
   }
 
   .item-row {
-    display: flex;
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr) minmax(0, auto);
     align-items: center;
     gap: 12px;
     padding: 11px 18px;
@@ -402,12 +416,31 @@
     text-decoration: line-through;
   }
 
+  .item-details {
+    display: flex;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: 6px;
+    max-width: none;
+    flex-wrap: wrap;
+    text-align: right;
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .item-quantity {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  .item-separator,
   .item-suggestion {
     font-size: 13px;
     color: var(--muted);
-    white-space: nowrap;
-    flex-shrink: 0;
   }
+  .item-suggestion { overflow-wrap: anywhere; }
+  .item-row.checked .item-quantity,
+  .item-row.checked .item-separator,
   .item-row.checked .item-suggestion { color: #A6AE9E; }
 
   /* ---------- Export row ---------- */
@@ -475,4 +508,15 @@
     .meal-filter-header { align-items: center; }
     .controls { flex-direction: column; align-items: stretch; }
     .progress-block { width: 100%; }
+    .item-row {
+      grid-template-columns: 18px minmax(0, 1fr);
+      row-gap: 2px;
+    }
+    .item-details {
+      grid-column: 2;
+      grid-row: 2;
+      justify-content: flex-start;
+      max-width: 100%;
+      text-align: left;
+    }
   }

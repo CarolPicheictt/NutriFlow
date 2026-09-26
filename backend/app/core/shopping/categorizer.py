@@ -34,10 +34,19 @@ class FoodCategorizer:
     # neutro (a comparação é feita sobre o nome já normalizado em
     # lowercase pelo FoodNameNormalizer).
     _KEYWORDS: dict[str, tuple[str, ...]] = {
+        "suplementos": (
+            "whey", "creatina", "albumina", "bcaa", "beta-alanina",
+            "glutamina", "suplemento", "pré-treino", "pre-treino",
+            "pré treino", "pre treino", "caseína", "caseina",
+            "proteína isolada", "proteina isolada", "hipercalórico",
+            "hipercalorico", "multivitamínico", "multivitaminico",
+            "maltodextrina", "dextrose", "termogênico", "termogenico",
+            "colágeno hidrolisado", "colageno hidrolisado",
+        ),
         "proteínas": (
             "frango", "sobrecoxa", "peito", "carne", "boi", "patinho",
             "acém", "peixe", "tilápia", "salmão", "atum", "sardinha",
-            "ovo", "ovos", "clara", "whey", "proteína", "tofu",
+            "ovo", "ovos", "clara", "proteína", "tofu",
             "linguiça", "peru", "presunto", "bacon", "camarão", "suíno",
             "porco", "costela",
         ),

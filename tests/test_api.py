@@ -100,12 +100,31 @@ def test_shopping_list_can_filter_selected_meals(
     assert export_response.json()["total_items"] == filtered_list["total_items"]
 
 
-def test_shopping_list_invalid_days_returns_422(client: TestClient, uploaded_plan_id: str):
+def test_shopping_list_days_support_31_and_reject_values_outside_range(
+    client: TestClient, uploaded_plan_id: str
+):
     response = client.get(f"/api/v1/shopping/{uploaded_plan_id}", params={"days": 0})
     assert response.status_code == 422
 
     response = client.get(f"/api/v1/shopping/{uploaded_plan_id}", params={"days": 31})
+    assert response.status_code == 200
+    assert response.json()["days"] == 31
+
+    response = client.get(f"/api/v1/shopping/{uploaded_plan_id}", params={"days": 32})
     assert response.status_code == 422
+
+    export_response = client.get(
+        f"/api/v1/shopping/{uploaded_plan_id}/export",
+        params={"days": 31, "fmt": "json"},
+    )
+    assert export_response.status_code == 200
+    assert export_response.json()["days"] == 31
+
+    export_response = client.get(
+        f"/api/v1/shopping/{uploaded_plan_id}/export",
+        params={"days": 32, "fmt": "json"},
+    )
+    assert export_response.status_code == 422
 
 
 def test_shopping_list_groups_items_by_category(client: TestClient, uploaded_plan_id: str):
@@ -165,8 +184,10 @@ def test_export_text_returns_shareable_list(client: TestClient, uploaded_plan_id
     )
     assert response.status_code == 200
     text = response.text
-    assert "Lista de compras" in text
-    assert "Total de itens" in text
+    assert response.headers["content-type"].startswith("text/plain")
+    assert text.startswith("*🛒 Lista de compras para 7 dias*")
+    assert "- ☐ *" in text
+    assert text.rstrip().splitlines()[-1].startswith("*Total: ")
 
 
 def test_export_json_returns_structured_list(client: TestClient, uploaded_plan_id: str):

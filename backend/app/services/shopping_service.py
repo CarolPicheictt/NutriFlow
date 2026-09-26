@@ -225,18 +225,41 @@ class ShoppingService:
     @staticmethod
     def _render_text(result: ShoppingListResult) -> str:
         """
-        Renderiza a lista de compras em texto simples, pronto para
-        copiar e colar em um aplicativo de mensagens.
+        Renderiza a lista com Markdown compatível com WhatsApp.
         """
-        lines = [f"🛒 Lista de compras — {result.days} dia(s)", ""]
+        day_label = "dia" if result.days == 1 else "dias"
+        lines = [f"*🛒 Lista de compras para {result.days} {day_label}*", ""]
 
         for category, items in sorted(result.categories.items()):
-            lines.append(f"📦 {category.upper()}")
+            lines.append(f"*{category.upper()}*")
             for item in items:
-                mark = "✅" if item.checked else "⬜"
-                suggestion = f" — {item.purchase_suggestion}" if item.purchase_suggestion else ""
-                lines.append(f"{mark} {item.name}{suggestion}")
+                mark = "✅" if item.checked else "☐"
+                quantity = ShoppingService._format_exact_quantity(item)
+                details = f" — {quantity}" if quantity else ""
+                if item.purchase_suggestion:
+                    suggestion = item.purchase_suggestion
+                    if quantity and not suggestion.lower().startswith("compre "):
+                        suggestion = f"compre {suggestion}"
+                    details += f" · {suggestion}" if quantity else f" — {suggestion}"
+                lines.append(f"- {mark} *{item.name}*{details}")
             lines.append("")
 
-        lines.append(f"Total de itens: {result.total_items}")
+        item_label = "item" if result.total_items == 1 else "itens"
+        lines.append(f"*Total: {result.total_items} {item_label}*")
         return "\n".join(lines).strip() + "\n"
+
+    @staticmethod
+    def _format_exact_quantity(item: ShoppingItem) -> str:
+        if item.unit_type.value == "free":
+            return ""
+
+        quantity = item.total_quantity
+        if quantity.is_integer():
+            quantity_text = f"{int(quantity):,}".replace(",", ".")
+        else:
+            quantity_text = f"{quantity:,.1f}".replace(",", "_").replace(".", ",").replace("_", ".")
+
+        unit = item.unit.strip()
+        if not unit:
+            return quantity_text
+        return f"{quantity_text}{unit}" if unit in {"g", "ml"} else f"{quantity_text} {unit}"
