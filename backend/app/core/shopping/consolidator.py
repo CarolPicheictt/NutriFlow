@@ -14,6 +14,8 @@ de outras classes.
 
 from __future__ import annotations
 
+from typing import Iterable, Optional
+
 from app.core.models.diet_plan import DietPlan, FoodItem
 from app.core.models.shopping_list import ShoppingItem, UnitType
 from app.core.shopping.units import UnitNormalizer
@@ -87,30 +89,64 @@ class ShoppingConsolidator:
         self._unit_normalizer = unit_normalizer or UnitNormalizer()
         self._name_normalizer = FoodNameNormalizer()
 
-    def consolidate(self, diet_plan: DietPlan) -> dict[str, ShoppingItem]:
+    def consolidate(
+        self,
+        diet_plan: DietPlan,
+        meal_names: Optional[Iterable[str]] = None,
+    ) -> dict[str, ShoppingItem]:
         """
-        Percorre todas as refeições do plano e consolida alimentos iguais.
+        Percorre as refeições do plano e consolida alimentos iguais.
 
-        Alimentos sem nome são ignorados. As quantidades somadas aqui
-        representam sempre 1 dia de dieta — o escalonamento para N dias é
-        responsabilidade do ``ShoppingCalculator``.
+        Alimentos sem nome são ignorados. Também são ignorados itens que na
+        verdade são um resumo nutricional de uma refeição capturado por
+        engano como se fosse um alimento (ver ``_is_nutrient_summary_row``)
+        — um problema conhecido do parser do WebDiet, onde uma linha como
+        "Almoço 42.2g 20.1g 63.5g" aparece com ``unit="Kcal"`` dentro de
+        outra refeição. Calorias não são algo que se compra, então nunca
+        deveriam virar item da lista de compras.
+
+        As quantidades somadas aqui representam sempre 1 dia de dieta — o
+        escalonamento para N dias é responsabilidade do
+        ``ShoppingCalculator``.
 
         Args:
             diet_plan: Plano alimentar completo (representa 1 dia).
+            meal_names: Quando informado, restringe o cálculo às refeições
+                com esse nome (ex.: apenas "Café da manhã" e "Pré-treino").
+                ``None`` ou vazio inclui todas as refeições do plano.
 
         Returns:
             Dicionário com o nome normalizado como chave e o
             ``ShoppingItem`` consolidado (ainda não escalonado) como valor.
         """
+        selected_meals = set(meal_names) if meal_names else None
         consolidated: dict[str, ShoppingItem] = {}
 
         for meal in diet_plan.meals:
+            if selected_meals is not None and meal.name not in selected_meals:
+                continue
             for item in meal.items:
                 if not item.name or not item.name.strip():
+                    continue
+                if self._is_nutrient_summary_row(item):
                     continue
                 self._merge_item(consolidated, item, meal.name)
 
         return consolidated
+
+    @staticmethod
+    def _is_nutrient_summary_row(food_item: FoodItem) -> bool:
+        """
+        Detecta um item que na verdade é um resumo nutricional de refeição
+        (nome da refeição + macros), não um alimento comprável.
+
+        O sinal é a unidade: "Kcal" nunca é algo que se compra no mercado.
+        Qualquer item vindo do parser com essa unidade é descartado, não
+        importa o nome — inclusive quando o nome contém o de uma refeição
+        (ex.: "Almoço 42.2g 20.1g 63.5g", "Total das refeições ...").
+        """
+        unit = (food_item.unit or "").strip().lower()
+        return unit == "kcal"
 
     def _merge_item(
         self,

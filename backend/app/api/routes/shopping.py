@@ -47,6 +47,12 @@ class ShoppingListResponse(BaseModel):
     categories: dict[str, list[ShoppingItem]]
 
 
+class MealsResponse(BaseModel):
+    """Refeições disponíveis em um plano alimentar."""
+
+    meals: list[str]
+
+
 class ChecklistUpdate(BaseModel):
     """Payload para atualizar estado de checklist."""
 
@@ -101,10 +107,23 @@ async def upload_diet(
     )
 
 
+@router.get("/plans/{plan_id}/meals", response_model=MealsResponse)
+async def get_plan_meals(
+    plan_id: UUID,
+    service: ShoppingService = Depends(get_shopping_service),
+) -> MealsResponse:
+    """Retorna os nomes das refeições disponíveis para seleção."""
+    meals = service.get_available_meals(plan_id)
+    if meals is None:
+        raise HTTPException(status_code=404, detail="Plano não encontrado.")
+    return MealsResponse(meals=meals)
+
+
 @router.get("/shopping/{plan_id}", response_model=ShoppingListResponse)
 async def get_shopping_list(
     plan_id: UUID,
     days: int = Query(7, ge=1, le=30),
+    meal_names: list[str] | None = Query(None),
     service: ShoppingService = Depends(get_shopping_service),
 ) -> ShoppingListResponse:
     """
@@ -117,7 +136,7 @@ async def get_shopping_list(
     Returns:
         ``ShoppingListResponse`` com itens agrupados por categoria.
     """
-    result = await service.get_shopping_list(plan_id, days)
+    result = await service.get_shopping_list(plan_id, days, meal_names)
     if result is None:
         raise HTTPException(status_code=404, detail="Plano não encontrado.")
 
@@ -158,6 +177,7 @@ async def export_shopping_list(
     plan_id: UUID,
     days: int = Query(7, ge=1, le=30),
     fmt: str = Query("text", pattern="^(text|json)$"),
+    meal_names: list[str] | None = Query(None),
     service: ShoppingService = Depends(get_shopping_service),
 ):
     """
@@ -172,7 +192,7 @@ async def export_shopping_list(
         Texto pronto para copiar/compartilhar (``fmt="text"``) ou um objeto
         JSON equivalente (``fmt="json"``).
     """
-    result = await service.export_list(plan_id, days, fmt)
+    result = await service.export_list(plan_id, days, fmt, meal_names)
     if result is None:
         raise HTTPException(status_code=404, detail="Plano não encontrado.")
 

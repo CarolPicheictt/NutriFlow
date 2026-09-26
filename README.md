@@ -216,3 +216,12 @@ checklist.
 - **Normalização de nomes é simples (MVP)**: remove espaços extras,
   lowercase e qualificadores comuns ("cozido", "light", "integral" etc.).
   Não há stemming nem IA semântica nesta versão.
+
+
+Terminal 1, backend:
+python -m uvicorn app.main:app --reload --app-dir backend
+
+Terminal 2, frontend:
+python -m http.server 5500 --directory frontend
+
+Depois abra http://localhost:5500. O Swagger do backend fica em http://127.0.0.1:8000/docs.

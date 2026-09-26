@@ -43,6 +43,42 @@ def test_shopping_list_for_missing_plan_returns_404(client: TestClient):
     assert response.status_code == 404
 
 
+def test_plan_meals_lists_meals_and_returns_404_for_missing_plan(
+    client: TestClient, uploaded_plan_id: str
+):
+    response = client.get(f"/api/v1/plans/{uploaded_plan_id}/meals")
+    assert response.status_code == 200
+    assert len(response.json()["meals"]) == 7
+
+    response = client.get(f"/api/v1/plans/{MISSING_PLAN_ID}/meals")
+    assert response.status_code == 404
+
+
+def test_shopping_list_can_filter_selected_meals(
+    client: TestClient, uploaded_plan_id: str
+):
+    meals_response = client.get(f"/api/v1/plans/{uploaded_plan_id}/meals")
+    first_meal = meals_response.json()["meals"][0]
+
+    full_list = client.get(f"/api/v1/shopping/{uploaded_plan_id}").json()
+    filtered_response = client.get(
+        f"/api/v1/shopping/{uploaded_plan_id}",
+        params={"meal_names": first_meal},
+    )
+
+    assert filtered_response.status_code == 200
+    filtered_list = filtered_response.json()
+    assert filtered_list["total_items"] > 0
+    assert filtered_list["total_items"] < full_list["total_items"]
+
+    export_response = client.get(
+        f"/api/v1/shopping/{uploaded_plan_id}/export",
+        params={"fmt": "json", "meal_names": first_meal},
+    )
+    assert export_response.status_code == 200
+    assert export_response.json()["total_items"] == filtered_list["total_items"]
+
+
 def test_shopping_list_invalid_days_returns_422(client: TestClient, uploaded_plan_id: str):
     response = client.get(f"/api/v1/shopping/{uploaded_plan_id}", params={"days": 0})
     assert response.status_code == 422

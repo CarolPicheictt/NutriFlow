@@ -1,0 +1,20 @@
+#Adição de Feature 1
+Adicione mais uma tela que eu possa subir o meu pdf de plano alimentar e ele use o scrap_do_pdf.py para fazer o processamento e transformação em json, armazenando em uma pasta adequada e já indo direto para a lista de compras inteligente.
+
+#Adição de Feature 2
+Sobre este protótipo de interface preciso que eu possa selecionar as refeições que eu quero que os alimentos entrem na lista, por exemplo, posso querer ver quais os ingredientes apenas do café da manhã e do pré-treino e quero que essa seleção seja feita pelo usuário. A aba de seleção pode vir dentro do mesmo container onde estão totalizados quantas refeições foram encontradas.
+
+#Ajuste
+O ultimo campo que tem outros não está fazendo sentido por não estar bem explicativo e por "Almoço 42.2g 20.1g 63.5g" não significar nada especifico para o usuário. O nome das refeições não deve ser tratado como ingrediente.
+
+#Duvida 
+Em ingredientes como o Atum, o ingrediente só passa a ter o seu volume recalculado a partir do sétimo dia, isso está correto?
+
+- Adicione um cabeçalho maior que indique para quantos dias aquela lista está sendo calculada.
+-Crie a funcionalidade de adicionar mais de um arquivo (duas pessoas diferentes que moram na mesma casa mas que fazem a compra juntas devem poder agrupar suas compras então cria o modo para que duas eu possa subir duas dietas e no momento do cálculo dos ingredientes para comprar, elas se somem)
+- Trate whey e demais suplementos em uma outra categoria: Suplementos
+- Faça com que o botão de copiar lista já traga o texto formatado com os itens de markdown do whatsapp.
+- considere que o número de dias pode ir até 31 dias e não apenas até 30
+
+- Sunday meal prep: os cálculos devem considerar que x gramas de frango pronto são y gramas de frango cru.
+- Indicação de preparação das refeições

@@ -88,7 +88,10 @@ class ShoppingService:
         self._name_normalizer = FoodNameNormalizer()
 
     async def get_shopping_list(
-        self, plan_id: UUID, days: int
+        self,
+        plan_id: UUID,
+        days: int,
+        meal_names: Optional[list[str]] = None,
     ) -> Optional[ShoppingListResult]:
         """
         Calcula a lista de compras de um plano, agrupada por categoria.
@@ -99,6 +102,10 @@ class ShoppingService:
         Args:
             plan_id: ID do plano alimentar importado.
             days: Número de dias para calcular.
+            meal_names: Quando informado, restringe o cálculo apenas às
+                refeições selecionadas pelo usuário (ex.: mostrar só os
+                ingredientes do café da manhã e do pré-treino). ``None``
+                considera todas as refeições do plano.
 
         Returns:
             ``ShoppingListResult`` com os itens agrupados por categoria, ou
@@ -108,7 +115,7 @@ class ShoppingService:
         if diet_plan is None:
             return None
 
-        items = self._calculator.calculate(diet_plan, days=days)
+        items = self._calculator.calculate(diet_plan, days=days, meal_names=meal_names)
         self._apply_checklist(plan_id, items)
 
         categories: dict[str, list[ShoppingItem]] = {}
@@ -121,6 +128,24 @@ class ShoppingService:
             total_items=len(items),
             categories=categories,
         )
+
+    def get_available_meals(self, plan_id: UUID) -> Optional[list[str]]:
+        """
+        Retorna os nomes das refeições do plano, na ordem em que aparecem.
+
+        Usado pela interface para montar a seleção de refeições (Feature 2)
+        sem duplicar essa informação em outro lugar.
+
+        Args:
+            plan_id: ID do plano alimentar.
+
+        Returns:
+            Lista de nomes de refeições, ou ``None`` se o plano não existir.
+        """
+        diet_plan = self._plan_service.get_plan(plan_id)
+        if diet_plan is None:
+            return None
+        return [meal.name for meal in diet_plan.meals]
 
     async def update_item_check(
         self, plan_id: UUID, item_name: str, checked: bool
@@ -145,7 +170,11 @@ class ShoppingService:
         return checked
 
     async def export_list(
-        self, plan_id: UUID, days: int, fmt: str
+        self,
+        plan_id: UUID,
+        days: int,
+        fmt: str,
+        meal_names: Optional[list[str]] = None,
     ) -> Optional[dict | str]:
         """
         Exporta a lista de compras em formato texto ou JSON.
@@ -154,6 +183,9 @@ class ShoppingService:
             plan_id: ID do plano alimentar.
             days: Número de dias.
             fmt: ``"text"`` (padrão) ou ``"json"``.
+            meal_names: Mesma seleção de refeições usada em
+                ``get_shopping_list`` — a exportação reflete o que o
+                usuário está vendo na tela.
 
         Returns:
             Uma string formatada para copiar/compartilhar (``fmt="text"``),
@@ -163,7 +195,7 @@ class ShoppingService:
         Raises:
             ValueError: ``fmt`` diferente de ``"text"``/``"json"``.
         """
-        result = await self.get_shopping_list(plan_id, days)
+        result = await self.get_shopping_list(plan_id, days, meal_names)
         if result is None:
             return None
 

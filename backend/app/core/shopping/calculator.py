@@ -65,12 +65,13 @@ class ShoppingCalculator:
         self,
         diet_plan: DietPlan,
         days: int = 7,
+        meal_names: Optional[list[str]] = None,
     ) -> list[ShoppingItem]:
         """
         Calcula a lista de compras consolidada para N dias.
 
         Pipeline:
-            1. Extrai e consolida os itens de todas as refeições (1 dia)
+            1. Extrai e consolida os itens das refeições selecionadas (1 dia)
             2. Escala as quantidades para N dias
             3. Categoriza cada item
             4. Gera sugestões de compra
@@ -79,11 +80,14 @@ class ShoppingCalculator:
         Args:
             diet_plan: Plano alimentar parseado (representa 1 dia).
             days: Número de dias para calcular (padrão: 7).
+            meal_names: Quando informado, calcula a lista apenas com os
+                alimentos das refeições listadas (ex.: ``["Café da manhã",
+                "Pré-treino"]``). ``None`` considera todas as refeições.
 
         Returns:
             Lista de ``ShoppingItem`` ordenada por categoria e nome.
         """
-        consolidated = self._consolidator.consolidate(diet_plan)
+        consolidated = self._consolidator.consolidate(diet_plan, meal_names)
         scaled = self._scale(consolidated, days)
         categorized = self._categorize(scaled)
         enriched = self._enrich_suggestions(categorized)
