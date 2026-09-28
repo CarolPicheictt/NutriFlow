@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+import json
+
 from fastapi.testclient import TestClient
 
 from app.services.plan_service import FilePlanRepository
@@ -98,6 +100,51 @@ def test_shopping_list_can_filter_selected_meals(
     )
     assert export_response.status_code == 200
     assert export_response.json()["total_items"] == filtered_list["total_items"]
+
+
+def test_substitutions_default_to_original_and_can_be_selected(
+    client: TestClient, uploaded_plan_id: str
+):
+    default_response = client.get(f"/api/v1/shopping/{uploaded_plan_id}")
+    assert default_response.status_code == 200
+    default = default_response.json()
+    groups = default["substitution_groups"]
+    assert len(groups) >= 2
+
+    cheese_group = next(group for group in groups if group["original_name"] == "Ovo de galinha")
+    cheese_option = next(option for option in cheese_group["options"] if option["name"] == "Queijo branco")
+    selected_choices = {cheese_group["key"]: cheese_option["key"]}
+    default_items = [item for items in default["categories"].values() for item in items]
+    assert not any(item["name"] == "Queijo branco" for item in default_items)
+
+    selected_response = client.get(
+        f"/api/v1/shopping/{uploaded_plan_id}",
+        params={"substitution_choices": json.dumps(selected_choices)},
+    )
+    assert selected_response.status_code == 200
+    selected_items = [
+        item for items in selected_response.json()["categories"].values() for item in items
+    ]
+    selected_by_name = {item["name"]: item for item in selected_items}
+    assert selected_by_name["Queijo branco"]["total_quantity"] == 14
+    remaining_eggs = next(item for item in selected_items if "ovo" in item["name"].lower())
+    assert remaining_eggs["total_quantity"] == 28
+
+    export_response = client.get(
+        f"/api/v1/shopping/{uploaded_plan_id}/export",
+        params={"fmt": "json", "substitution_choices": json.dumps(selected_choices)},
+    )
+    assert export_response.status_code == 200
+    export_items = [
+        item for items in export_response.json()["categories"].values() for item in items
+    ]
+    assert next(item for item in export_items if item["name"] == "Queijo branco")["total_quantity"] == 14
+
+    invalid_response = client.get(
+        f"/api/v1/shopping/{uploaded_plan_id}",
+        params={"substitution_choices": "not-json"},
+    )
+    assert invalid_response.status_code == 422
 
 
 def test_shopping_list_combines_multiple_plans(

@@ -13,12 +13,17 @@ persistência real (PostgreSQL) no futuro.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Optional, Protocol
 from uuid import UUID
 
-from app.core.models.diet_plan import DietPlan
-from app.core.models.shopping_list import ShoppingItem
+from app.core.models.diet_plan import DietPlan, FoodItem
+from app.core.models.shopping_list import (
+    ShoppingItem,
+    ShoppingSubstitutionGroup,
+    ShoppingSubstitutionOption,
+)
 from app.core.shopping.calculator import ShoppingCalculator
 from app.core.shopping.consolidator import FoodNameNormalizer
 from app.core.shopping.units import UnitNormalizer
@@ -33,6 +38,7 @@ class ShoppingListResult:
     days: int
     total_items: int
     categories: dict[str, list[ShoppingItem]] = field(default_factory=dict)
+    substitution_groups: list[ShoppingSubstitutionGroup] = field(default_factory=list)
 
 
 class ChecklistRepository(Protocol):
@@ -95,6 +101,7 @@ class ShoppingService:
         days: int,
         meal_names: Optional[list[str]] = None,
         additional_plan_ids: Optional[list[UUID]] = None,
+        substitution_choices: Optional[dict[str, str]] = None,
     ) -> Optional[ShoppingListResult]:
         """
         Calcula a lista de compras de um plano, agrupada por categoria.
@@ -118,7 +125,11 @@ class ShoppingService:
         if diet_plan is None:
             return None
 
-        items = self._calculator.calculate(diet_plan, days=days, meal_names=meal_names)
+        groups, replacement_items = self._build_substitution_groups(diet_plan)
+        selected_plan = self._apply_substitution_choices(
+            diet_plan, replacement_items, substitution_choices or {}
+        )
+        items = self._calculator.calculate(selected_plan, days=days, meal_names=meal_names)
         self._apply_checklist(plan_id, items)
 
         categories: dict[str, list[ShoppingItem]] = {}
@@ -130,6 +141,7 @@ class ShoppingService:
             days=days,
             total_items=len(items),
             categories=categories,
+            substitution_groups=groups,
         )
 
     def get_available_meals(
@@ -168,6 +180,118 @@ class ShoppingService:
         meals = [meal for plan in plans if plan is not None for meal in plan.meals]
         return DietPlan(meals=meals)
 
+    def _build_substitution_groups(
+        self, diet_plan: DietPlan
+    ) -> tuple[
+        list[ShoppingSubstitutionGroup],
+        dict[tuple[int, int], dict[str, FoodItem]],
+    ]:
+        groups: list[ShoppingSubstitutionGroup] = []
+        replacements: dict[tuple[int, int], dict[str, FoodItem]] = {}
+
+        for meal_index, meal in enumerate(diet_plan.meals):
+            for substitution in meal.substitutions:
+                if not substitution.substitution_for:
+                    continue
+
+                target_name = self._normalize_substitution_name(
+                    substitution.substitution_for
+                )
+                source_index = next((
+                    index for index, item in enumerate(meal.items)
+                    if self._normalize_substitution_name(item.name) == target_name
+                    and not self._is_substitution_item(item, meal.substitutions)
+                ), None)
+                if source_index is None:
+                    continue
+
+                alternative = self._parse_substitution_food(substitution)
+                if alternative is None:
+                    continue
+
+                group_key = f"{meal_index}:{source_index}"
+                group = next((item for item in groups if item.key == group_key), None)
+                if group is None:
+                    original = meal.items[source_index]
+                    group = ShoppingSubstitutionGroup(
+                        key=group_key,
+                        meal_name=meal.name,
+                        original_name=original.name,
+                        options=[ShoppingSubstitutionOption(
+                            key="default",
+                            name=original.name,
+                            quantity=original.quantity or 0,
+                            unit=original.unit or "",
+                        )],
+                    )
+                    groups.append(group)
+                    replacements[(meal_index, source_index)] = {}
+
+                option_key = f"alternative:{len(group.options)}"
+                group.options.append(ShoppingSubstitutionOption(
+                    key=option_key,
+                    name=alternative.name,
+                    quantity=alternative.quantity or 0,
+                    unit=alternative.unit or "",
+                ))
+                replacements[(meal_index, source_index)][option_key] = alternative
+
+        return groups, replacements
+
+    def _apply_substitution_choices(
+        self,
+        diet_plan: DietPlan,
+        replacements: dict[tuple[int, int], dict[str, FoodItem]],
+        choices: dict[str, str],
+    ) -> DietPlan:
+        selected_plan = diet_plan.model_copy(deep=True)
+        for meal_index, meal in enumerate(selected_plan.meals):
+            selected_items: list[FoodItem] = []
+            for item_index, item in enumerate(meal.items):
+                if self._is_substitution_item(item, meal.substitutions):
+                    continue
+
+                group_key = f"{meal_index}:{item_index}"
+                choice_key = choices.get(group_key, "default")
+                replacement = replacements.get((meal_index, item_index), {}).get(choice_key)
+                selected_items.append(replacement.model_copy(deep=True) if replacement else item)
+            meal.items = selected_items
+
+        return selected_plan
+
+    @staticmethod
+    def _normalize_substitution_name(name: str) -> str:
+        return FoodNameNormalizer().normalize(name.strip().rstrip(" -").strip())
+
+    def _is_substitution_item(self, item: FoodItem, substitutions: list[FoodItem]) -> bool:
+        item_name = self._normalize_substitution_name(item.name)
+        return any(
+            self._normalize_substitution_name(substitution.name) == item_name
+            for substitution in substitutions
+        )
+
+    @staticmethod
+    def _parse_substitution_food(substitution: FoodItem) -> Optional[FoodItem]:
+        if substitution.quantity is not None and substitution.unit:
+            return substitution.model_copy(deep=True)
+
+        raw_quantity = (substitution.raw_quantity or "").strip()
+        raw_quantity = re.sub(r"\s*\([^)]*\)\s*$", "", raw_quantity).strip()
+        match = re.match(r"^(\d+(?:[.,]\d+)?)\s*(.*?)\s*$", raw_quantity)
+        if not match:
+            return None
+
+        unit = match.group(2).strip()
+        if not unit:
+            return None
+        return FoodItem(
+            name=substitution.name,
+            quantity=float(match.group(1).replace(",", ".")),
+            unit=unit,
+            raw_quantity=substitution.raw_quantity,
+            substitution_for=substitution.substitution_for,
+        )
+
     async def update_item_check(
         self, plan_id: UUID, item_name: str, checked: bool
     ) -> Optional[bool]:
@@ -197,6 +321,7 @@ class ShoppingService:
         fmt: str,
         meal_names: Optional[list[str]] = None,
         additional_plan_ids: Optional[list[UUID]] = None,
+        substitution_choices: Optional[dict[str, str]] = None,
     ) -> Optional[dict | str]:
         """
         Exporta a lista de compras em formato texto ou JSON.
@@ -218,7 +343,7 @@ class ShoppingService:
             ValueError: ``fmt`` diferente de ``"text"``/``"json"``.
         """
         result = await self.get_shopping_list(
-            plan_id, days, meal_names, additional_plan_ids
+            plan_id, days, meal_names, additional_plan_ids, substitution_choices
         )
         if result is None:
             return None
@@ -228,6 +353,7 @@ class ShoppingService:
                 "plan_id": str(result.plan_id),
                 "days": result.days,
                 "total_items": result.total_items,
+                "substitution_groups": [group.model_dump() for group in result.substitution_groups],
                 "categories": {
                     category: [item.model_dump() for item in items]
                     for category, items in result.categories.items()

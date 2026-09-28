@@ -279,6 +279,29 @@
     background: transparent;
   }
 
+  .substitution-panel {
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 0;
+    margin-bottom: 16px;
+  }
+  .substitution-panel[hidden] { display: none; }
+  .substitution-heading h3 { margin: 0; font-size: 15px; }
+  .substitution-heading p { margin: 4px 0 12px; color: var(--muted); font-size: 12px; }
+  .substitution-options { display: grid; gap: 10px; }
+  .substitution-option { display: grid; grid-template-columns: minmax(150px, 0.7fr) minmax(0, 1.3fr); align-items: center; gap: 12px; }
+  .substitution-option label { font-size: 13px; color: var(--ink); }
+  .substitution-option select {
+    min-width: 0;
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--ink);
+    font: 13px var(--sans);
+  }
+
   /* ---------- Controls ---------- */
   .controls {
     display: flex;
@@ -508,6 +531,7 @@
     .plan-actions { flex-wrap: wrap; justify-content: flex-end; }
     .meal-options { grid-template-columns: 1fr; }
     .meal-filter-header { align-items: center; }
+    .substitution-option { grid-template-columns: 1fr; gap: 5px; }
     .controls { flex-direction: column; align-items: stretch; }
     .progress-block { width: 100%; }
     .item-row {

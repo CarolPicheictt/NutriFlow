@@ -8,6 +8,7 @@
     mealsFound: "nutriflow.mealsFound",
     plans: "nutriflow.plans",
     selectedMeals: "nutriflow.selectedMeals",
+    substitutionChoices: "nutriflow.substitutionChoices",
     days: "nutriflow.days",
   };
 
@@ -60,6 +61,8 @@
 
   const listContainer = el("listContainer");
   const shoppingHeading = el("shoppingHeading");
+  const substitutionPanel = el("substitutionPanel");
+  const substitutionOptions = el("substitutionOptions");
   const listError = el("listError");
 
   const copyTextBtn = el("copyTextBtn");
@@ -71,6 +74,7 @@
   let plans = [];
   let availableMeals = [];
   let selectedMeals = [];
+  let substitutionChoices = {};
   let uploadMode = "json";
   let isUpdatingList = false;
 
@@ -169,9 +173,11 @@
     localStorage.removeItem(STORAGE_KEYS.mealsFound);
     localStorage.removeItem(STORAGE_KEYS.plans);
     localStorage.removeItem(STORAGE_KEYS.selectedMeals);
+    localStorage.removeItem(STORAGE_KEYS.substitutionChoices);
     plans = [];
     availableMeals = [];
     selectedMeals = [];
+    substitutionChoices = {};
   }
 
   function getStoredPlanId() {
@@ -300,7 +306,11 @@
         return;
       }
 
-      if (!append) localStorage.removeItem(STORAGE_KEYS.selectedMeals);
+      if (!append) {
+        localStorage.removeItem(STORAGE_KEYS.selectedMeals);
+        localStorage.removeItem(STORAGE_KEYS.substitutionChoices);
+        substitutionChoices = {};
+      }
       const previousMeals = [...availableMeals];
       const previousSelection = [...selectedMeals];
       savePlans(importedPlans, append);
@@ -459,7 +469,7 @@
 
       const body = await response.json();
       currentCategories = body.categories;
-      renderList(body.categories, body.total_items, body.days);
+      renderList(body.categories, body.total_items, body.days, body.substitution_groups || []);
     } catch (err) {
       showError(listError, err.message);
     } finally {
@@ -473,14 +483,21 @@
     const params = new URLSearchParams({ days: String(days) });
     if (format) params.set("fmt", format);
     appendAdditionalPlanIds(params);
+    const selectedChoices = Object.fromEntries(
+      Object.entries(substitutionChoices).filter(([, choice]) => choice !== "default")
+    );
+    if (Object.keys(selectedChoices).length) {
+      params.set("substitution_choices", JSON.stringify(selectedChoices));
+    }
     if (selectedMeals.length !== availableMeals.length) {
       selectedMeals.forEach((meal) => params.append("meal_names", meal));
     }
     return params;
   }
 
-  function renderList(categories, totalItems, days) {
+  function renderList(categories, totalItems, days, substitutionGroups) {
     shoppingHeading.textContent = `Lista de compras para ${days} ${days === 1 ? "dia" : "dias"}`;
+    renderSubstitutionGroups(substitutionGroups);
     listContainer.innerHTML = "";
     listContainer.classList.remove("revealed");
 
@@ -501,6 +518,55 @@
     updateProgress();
     // uma única revelação orquestrada da lista inteira
     requestAnimationFrame(() => listContainer.classList.add("revealed"));
+  }
+
+  function renderSubstitutionGroups(groups) {
+    substitutionOptions.replaceChildren();
+    substitutionPanel.hidden = !groups.length;
+
+    const validChoices = {};
+    groups.forEach((group) => {
+      const row = document.createElement("div");
+      row.className = "substitution-option";
+
+      const label = document.createElement("label");
+      const selectId = `substitution-${group.key}`;
+      label.htmlFor = selectId;
+      label.textContent = `${group.meal_name}: ${group.original_name}`;
+
+      const select = document.createElement("select");
+      select.id = selectId;
+      select.setAttribute("aria-label", `Substituição para ${group.original_name} em ${group.meal_name}`);
+      group.options.forEach((option) => {
+        const element = document.createElement("option");
+        element.value = option.key;
+        const amount = option.unit
+          ? ` · ${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(option.quantity)} ${option.unit}`
+          : "";
+        element.textContent = option.key === "default"
+          ? `Padrão: ${option.name}${amount}`
+          : `Substituir por: ${option.name}${amount}`;
+        select.appendChild(element);
+      });
+
+      const savedChoice = substitutionChoices[group.key];
+      select.value = group.options.some((option) => option.key === savedChoice)
+        ? savedChoice
+        : "default";
+      if (select.value !== "default") validChoices[group.key] = select.value;
+      select.addEventListener("change", () => {
+        if (select.value === "default") delete substitutionChoices[group.key];
+        else substitutionChoices[group.key] = select.value;
+        localStorage.setItem(STORAGE_KEYS.substitutionChoices, JSON.stringify(substitutionChoices));
+        loadShoppingList();
+      });
+
+      row.append(label, select);
+      substitutionOptions.appendChild(row);
+    });
+
+    substitutionChoices = validChoices;
+    localStorage.setItem(STORAGE_KEYS.substitutionChoices, JSON.stringify(substitutionChoices));
   }
 
   function renderCategory(category, items) {
@@ -697,6 +763,11 @@
 
   const storedDays = localStorage.getItem(STORAGE_KEYS.days);
   if (storedDays) daysInput.value = clampDays(storedDays);
+  try {
+    substitutionChoices = JSON.parse(localStorage.getItem(STORAGE_KEYS.substitutionChoices) || "{}") || {};
+  } catch (_) {
+    substitutionChoices = {};
+  }
 
   plans = getStoredPlans();
   const storedPlanId = getStoredPlanId();

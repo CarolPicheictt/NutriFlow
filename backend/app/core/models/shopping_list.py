@@ -68,3 +68,21 @@ class ShoppingItem(BaseModel):
     # localizar o item certo sem depender do nome de exibição, que pode
     # variar em acentuação/capitalização entre refeições.
     normalized_name: str = Field(default="", exclude=True)
+
+
+class ShoppingSubstitutionOption(BaseModel):
+    """Uma opção de ingrediente dentro de um grupo de substituição."""
+
+    key: str
+    name: str
+    quantity: float
+    unit: str
+
+
+class ShoppingSubstitutionGroup(BaseModel):
+    """Opções mutuamente exclusivas para um ingrediente de uma refeição."""
+
+    key: str
+    meal_name: str
+    original_name: str
+    options: list[ShoppingSubstitutionOption]

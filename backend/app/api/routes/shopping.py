@@ -12,6 +12,7 @@ HTTP e delegam para os serviços de aplicação (``PlanService`` e
 
 from __future__ import annotations
 
+import json
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
@@ -19,7 +20,7 @@ from pydantic import BaseModel
 from starlette.responses import PlainTextResponse
 
 from app.api.dependencies import get_plan_service, get_shopping_service
-from app.core.models.shopping_list import ShoppingItem
+from app.core.models.shopping_list import ShoppingItem, ShoppingSubstitutionGroup
 from app.services.plan_service import (
     InvalidDietPlanError,
     PlanService,
@@ -45,6 +46,7 @@ class ShoppingListResponse(BaseModel):
     days: int
     total_items: int
     categories: dict[str, list[ShoppingItem]]
+    substitution_groups: list[ShoppingSubstitutionGroup]
 
 
 class MealsResponse(BaseModel):
@@ -65,6 +67,21 @@ class ChecklistResponse(BaseModel):
 
     item_name: str
     checked: bool
+
+
+def _decode_substitution_choices(raw_choices: str | None) -> dict[str, str] | None:
+    if raw_choices is None:
+        return None
+    try:
+        choices = json.loads(raw_choices)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=422, detail="Escolhas de substituição inválidas.") from exc
+    if not isinstance(choices, dict) or not all(
+        isinstance(key, str) and isinstance(value, str)
+        for key, value in choices.items()
+    ):
+        raise HTTPException(status_code=422, detail="Escolhas de substituição inválidas.")
+    return choices
 
 
 @router.post("/upload", response_model=UploadResponse)
@@ -123,6 +140,7 @@ async def get_shopping_list(
     days: int = Query(7, ge=1, le=31),
     meal_names: list[str] | None = Query(None),
     additional_plan_ids: list[UUID] | None = Query(None),
+    substitution_choices: str | None = Query(None),
     service: ShoppingService = Depends(get_shopping_service),
 ) -> ShoppingListResponse:
     """
@@ -136,7 +154,11 @@ async def get_shopping_list(
         ``ShoppingListResponse`` com itens agrupados por categoria.
     """
     result = await service.get_shopping_list(
-        plan_id, days, meal_names, additional_plan_ids
+        plan_id,
+        days,
+        meal_names,
+        additional_plan_ids,
+        _decode_substitution_choices(substitution_choices),
     )
     if result is None:
         raise HTTPException(status_code=404, detail="Plano não encontrado.")
@@ -146,6 +168,7 @@ async def get_shopping_list(
         days=result.days,
         total_items=result.total_items,
         categories=result.categories,
+        substitution_groups=result.substitution_groups,
     )
 
 
@@ -180,6 +203,7 @@ async def export_shopping_list(
     fmt: str = Query("text", pattern="^(text|json)$"),
     meal_names: list[str] | None = Query(None),
     additional_plan_ids: list[UUID] | None = Query(None),
+    substitution_choices: str | None = Query(None),
     service: ShoppingService = Depends(get_shopping_service),
 ):
     """
@@ -195,7 +219,12 @@ async def export_shopping_list(
         JSON equivalente (``fmt="json"``).
     """
     result = await service.export_list(
-        plan_id, days, fmt, meal_names, additional_plan_ids
+        plan_id,
+        days,
+        fmt,
+        meal_names,
+        additional_plan_ids,
+        _decode_substitution_choices(substitution_choices),
     )
     if result is None:
         raise HTTPException(status_code=404, detail="Plano não encontrado.")
