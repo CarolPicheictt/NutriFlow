@@ -6,6 +6,7 @@
     planId: "nutriflow.planId",
     patientName: "nutriflow.patientName",
     mealsFound: "nutriflow.mealsFound",
+    plans: "nutriflow.plans",
     selectedMeals: "nutriflow.selectedMeals",
     days: "nutriflow.days",
   };
@@ -42,11 +43,11 @@
   const planSection = el("planSection");
   const patientNameEl = el("patientName");
   const planMetaEl = el("planMeta");
+  const addPlansBtn = el("addPlansBtn");
   const changePlanBtn = el("changePlanBtn");
   const mealOptions = el("mealOptions");
   const mealSelectionSummary = el("mealSelectionSummary");
   const selectAllMealsBtn = el("selectAllMealsBtn");
-  const applyMealsBtn = el("applyMealsBtn");
   const mealSelectionError = el("mealSelectionError");
 
   const daysInput = el("daysInput");
@@ -67,9 +68,11 @@
   const toastEl = el("toast");
 
   let currentCategories = null; // último resultado carregado da API
+  let plans = [];
   let availableMeals = [];
   let selectedMeals = [];
   let uploadMode = "json";
+  let isUpdatingList = false;
 
   // ---------- utilidades ----------
 
@@ -109,11 +112,11 @@
     constructor(status, message) { super(message); this.status = status; }
   }
 
-  function friendlyUploadError(status, detail) {
-    if (status === 422) return uploadMode === "pdf"
+  function friendlyUploadError(status, detail, contentType) {
+    if (status === 422) return contentType === "application/pdf"
       ? "Não foi possível processar este PDF. Confira se é um plano alimentar exportado pelo WebDiet."
       : "Não foi possível ler esse arquivo. Confira se é um JSON de plano alimentar válido.";
-    if (status === 415) return `Formato incompatível. Selecione um arquivo .${uploadMode}.`;
+    if (status === 415) return "Formato incompatível. Selecione um arquivo PDF ou JSON.";
     return detail || "Não foi possível importar o plano. Tente novamente.";
   }
 
@@ -127,23 +130,61 @@
     localStorage.setItem(STORAGE_KEYS.apiBase, apiBaseInput.value.trim());
   });
 
-  function savePlan(planId, patientName, mealsFound) {
-    localStorage.setItem(STORAGE_KEYS.planId, planId);
-    localStorage.setItem(STORAGE_KEYS.patientName, patientName || "");
-    localStorage.setItem(STORAGE_KEYS.mealsFound, String(mealsFound));
+  function getStoredPlans() {
+    try {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.plans) || "null");
+      if (Array.isArray(stored) && stored.length) return stored;
+    } catch (_) {}
+
+    const planId = localStorage.getItem(STORAGE_KEYS.planId);
+    return planId ? [{
+      plan_id: planId,
+      patient_name: localStorage.getItem(STORAGE_KEYS.patientName) || "",
+      meals_found: Number(localStorage.getItem(STORAGE_KEYS.mealsFound) || 0),
+    }] : [];
+  }
+
+  function savePlans(newPlans, append) {
+    const combined = append ? [...getStoredPlans()] : [];
+    newPlans.forEach((plan) => {
+      if (!combined.some((existing) => existing.plan_id === plan.plan_id)) combined.push(plan);
+    });
+    plans = combined;
+    localStorage.setItem(STORAGE_KEYS.plans, JSON.stringify(plans));
+    localStorage.setItem(STORAGE_KEYS.planId, plans[0].plan_id);
+    localStorage.setItem(
+      STORAGE_KEYS.patientName,
+      plans.map((plan) => plan.patient_name).filter(Boolean).join(" + ")
+    );
+    localStorage.setItem(
+      STORAGE_KEYS.mealsFound,
+      String(plans.reduce((total, plan) => total + plan.meals_found, 0))
+    );
+    return plans;
   }
 
   function clearPlan() {
     localStorage.removeItem(STORAGE_KEYS.planId);
     localStorage.removeItem(STORAGE_KEYS.patientName);
     localStorage.removeItem(STORAGE_KEYS.mealsFound);
+    localStorage.removeItem(STORAGE_KEYS.plans);
     localStorage.removeItem(STORAGE_KEYS.selectedMeals);
+    plans = [];
     availableMeals = [];
     selectedMeals = [];
   }
 
   function getStoredPlanId() {
-    return localStorage.getItem(STORAGE_KEYS.planId);
+    return getStoredPlanIds()[0] || null;
+  }
+
+  function getStoredPlanIds() {
+    return plans.length ? plans.map((plan) => plan.plan_id) : getStoredPlans().map((plan) => plan.plan_id);
+  }
+
+  function appendAdditionalPlanIds(params) {
+    getStoredPlanIds().slice(1).forEach((planId) => params.append("additional_plan_ids", planId));
+    return params;
   }
 
   // ---------- telas ----------
@@ -154,12 +195,14 @@
     showError(uploadError, null);
   }
 
-  function showPlanScreen(planId, patientName, mealsFound) {
+  function showPlanScreen() {
     uploadSection.style.display = "none";
     planSection.style.display = "block";
-    patientNameEl.textContent = patientName || "Plano importado";
-    planMetaEl.textContent = mealsFound + " refeição(ões) encontradas";
-    planSection.dataset.planId = planId;
+    patientNameEl.textContent = plans.map((plan) => plan.patient_name).filter(Boolean).join(" + ") || "Planos importados";
+    const mealCount = plans.reduce((total, plan) => total + plan.meals_found, 0);
+    const planLabel = plans.length === 1 ? "plano" : "planos";
+    planMetaEl.textContent = `${plans.length} ${planLabel} · ${mealCount} refeições encontradas`;
+    planSection.dataset.planId = plans[0].plan_id;
   }
 
   // ---------- upload ----------
@@ -172,16 +215,23 @@
     jsonTab.setAttribute("aria-selected", String(!isPdf));
     pdfTab.setAttribute("aria-selected", String(isPdf));
     fileInput.accept = isPdf ? "application/pdf,.pdf" : "application/json,.json";
-    pickFileBtn.textContent = isPdf ? "Selecionar arquivo PDF" : "Selecionar arquivo JSON";
+    pickFileBtn.textContent = isPdf ? "Selecionar dietas PDF" : "Selecionar dietas JSON";
     uploadDescription.textContent = isPdf
-      ? "Envie o PDF do plano alimentar exportado pelo WebDiet."
-      : "Selecione o arquivo JSON do seu plano alimentar.";
+      ? "Selecione um ou mais PDFs de planos alimentares exportados pelo WebDiet."
+      : "Selecione uma ou mais dietas em JSON para somar as compras da casa.";
     showError(uploadError, null);
   }
 
   jsonTab.addEventListener("click", () => setUploadMode("json"));
   pdfTab.addEventListener("click", () => setUploadMode("pdf"));
-  pickFileBtn.addEventListener("click", () => fileInput.click());
+  pickFileBtn.addEventListener("click", () => {
+    fileInput.accept = uploadMode === "pdf" ? "application/pdf,.pdf" : "application/json,.json";
+    fileInput.click();
+  });
+  addPlansBtn.addEventListener("click", () => {
+    fileInput.accept = "application/pdf,.pdf,application/json,.json";
+    fileInput.click();
+  });
 
   ["dragover", "dragleave", "drop"].forEach((evt) => {
     uploadSection.addEventListener(evt, (e) => {
@@ -190,49 +240,87 @@
     });
   });
   uploadSection.addEventListener("drop", (e) => {
-    const file = e.dataTransfer.files && e.dataTransfer.files[0];
-    if (file) handleUpload(file);
+    const files = e.dataTransfer.files;
+    if (files && files.length) handleUpload(files);
   });
 
   fileInput.addEventListener("change", () => {
-    const file = fileInput.files[0];
-    if (file) handleUpload(file);
+    if (fileInput.files.length) handleUpload(fileInput.files);
     fileInput.value = "";
   });
 
-  async function handleUpload(file) {
+  async function handleUpload(fileList) {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+
     showError(uploadError, null);
-    const expectedExtension = `.${uploadMode}`;
-    if (!file.name.toLowerCase().endsWith(expectedExtension)) {
-      showError(uploadError, `O formato selecionado é ${uploadMode.toUpperCase()}. Escolha um arquivo ${expectedExtension}.`);
+    const invalidFile = files.find((file) => !/\.(pdf|json)$/i.test(file.name));
+    if (invalidFile) {
+      showError(uploadError, `${invalidFile.name}: selecione um arquivo PDF ou JSON.`);
       return;
     }
 
+    const append = getStoredPlanIds().length > 0;
     pickFileBtn.disabled = true;
-    pickFileBtn.textContent = "Enviando...";
-
-    const formData = new FormData();
-    const contentType = uploadMode === "pdf" ? "application/pdf" : "application/json";
-    formData.append("file", new File([file], file.name, { type: contentType }));
+    addPlansBtn.disabled = true;
+    pickFileBtn.textContent = "Enviando dietas...";
+    addPlansBtn.textContent = "Enviando...";
+    const importedPlans = [];
+    const failedFiles = [];
 
     try {
-      const response = await apiFetch("/api/v1/upload", { method: "POST", body: formData });
-      const body = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        throw new ApiError(response.status, friendlyUploadError(response.status, body.detail));
+      for (const file of files) {
+        const formData = new FormData();
+        const contentType = file.name.toLowerCase().endsWith(".pdf")
+          ? "application/pdf"
+          : "application/json";
+        formData.append("file", new File([file], file.name, { type: contentType }));
+        try {
+          const response = await apiFetch("/api/v1/upload", { method: "POST", body: formData });
+          const body = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new ApiError(
+              response.status,
+              friendlyUploadError(response.status, body.detail, contentType)
+            );
+          }
+          importedPlans.push({
+            plan_id: body.plan_id,
+            patient_name: body.patient_name || file.name,
+            meals_found: body.meals_found || 0,
+          });
+        } catch (error) {
+          failedFiles.push(`${file.name}: ${error.message}`);
+        }
       }
 
-      localStorage.removeItem(STORAGE_KEYS.selectedMeals);
-      savePlan(body.plan_id, body.patient_name, body.meals_found);
-      showPlanScreen(body.plan_id, body.patient_name, body.meals_found);
-      showToast(body.message || "Plano importado com sucesso");
-      await loadPlanMeals(body.plan_id);
+      if (!importedPlans.length) {
+        const message = failedFiles.join(" ");
+        showError(append ? listError : uploadError, message);
+        return;
+      }
+
+      if (!append) localStorage.removeItem(STORAGE_KEYS.selectedMeals);
+      const previousMeals = [...availableMeals];
+      const previousSelection = [...selectedMeals];
+      savePlans(importedPlans, append);
+      showPlanScreen();
+      await loadPlanMeals(getStoredPlanId(), {
+        previousMeals: append ? previousMeals : [],
+        previousSelection: append ? previousSelection : null,
+      });
+      const successMessage = importedPlans.length === 1
+        ? "Dieta adicionada à compra da casa"
+        : `${importedPlans.length} dietas adicionadas à compra da casa`;
+      showToast(failedFiles.length ? `${successMessage}; ${failedFiles.length} arquivo(s) falharam.` : successMessage, failedFiles.length > 0);
+      if (failedFiles.length) showError(listError, failedFiles.join(" "));
     } catch (err) {
       showError(uploadError, err.message);
     } finally {
       pickFileBtn.disabled = false;
-      pickFileBtn.textContent = `Selecionar arquivo ${uploadMode.toUpperCase()}`;
+      addPlansBtn.disabled = false;
+      pickFileBtn.textContent = `Selecionar dietas ${uploadMode.toUpperCase()}`;
+      addPlansBtn.textContent = "Adicionar dieta";
     }
   }
 
@@ -261,7 +349,6 @@
   });
 
   refreshBtn.addEventListener("click", loadShoppingList);
-  applyMealsBtn.addEventListener("click", loadShoppingList);
 
   mealOptions.addEventListener("change", () => {
     selectedMeals = Array.from(
@@ -278,11 +365,12 @@
     renderMealOptions();
   });
 
-  async function loadPlanMeals(planId) {
+  async function loadPlanMeals(planId, selectionContext = {}) {
     showError(listError, null);
     mealSelectionSummary.textContent = "Carregando refeições...";
     try {
-      const response = await apiFetch(`/api/v1/plans/${planId}/meals`);
+      const mealParams = appendAdditionalPlanIds(new URLSearchParams());
+      const response = await apiFetch(`/api/v1/plans/${planId}/meals?${mealParams}`);
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
         throw new ApiError(response.status, body.detail || "Não foi possível carregar as refeições.");
@@ -291,7 +379,11 @@
       const body = await response.json();
       availableMeals = body.meals || [];
       const storedSelection = JSON.parse(localStorage.getItem(STORAGE_KEYS.selectedMeals) || "null");
-      selectedMeals = Array.isArray(storedSelection)
+      selectedMeals = selectionContext.previousSelection
+        ? availableMeals.filter((meal) => selectionContext.previousMeals.includes(meal)
+          ? selectionContext.previousSelection.includes(meal)
+          : true)
+        : Array.isArray(storedSelection)
         ? availableMeals.filter((meal) => storedSelection.includes(meal))
         : [...availableMeals];
       localStorage.setItem(STORAGE_KEYS.selectedMeals, JSON.stringify(selectedMeals));
@@ -327,11 +419,14 @@
       ? "Desmarcar todas"
       : "Selecionar todas";
     selectAllMealsBtn.disabled = availableMeals.length === 0;
-    applyMealsBtn.disabled = selectedCount === 0 || availableMeals.length === 0;
+    const cannotUpdate = isUpdatingList || selectedCount === 0 || availableMeals.length === 0;
+    refreshBtn.disabled = cannotUpdate;
     showError(mealSelectionError, selectedCount === 0 ? "Selecione ao menos uma refeição." : null);
   }
 
   async function loadShoppingList() {
+    if (isUpdatingList) return;
+
     const planId = getStoredPlanId();
     if (!planId) return;
 
@@ -344,8 +439,9 @@
     localStorage.setItem(STORAGE_KEYS.days, String(days));
 
     showError(listError, null);
-    refreshBtn.disabled = true;
-    refreshBtn.textContent = "Calculando...";
+    isUpdatingList = true;
+    updateMealSelectionControls();
+    refreshBtn.textContent = "Atualizando...";
 
     try {
       const params = createListParams(days);
@@ -367,7 +463,8 @@
     } catch (err) {
       showError(listError, err.message);
     } finally {
-      refreshBtn.disabled = false;
+      isUpdatingList = false;
+      updateMealSelectionControls();
       refreshBtn.textContent = "Atualizar lista";
     }
   }
@@ -375,6 +472,7 @@
   function createListParams(days, format) {
     const params = new URLSearchParams({ days: String(days) });
     if (format) params.set("fmt", format);
+    appendAdditionalPlanIds(params);
     if (selectedMeals.length !== availableMeals.length) {
       selectedMeals.forEach((meal) => params.append("meal_names", meal));
     }
@@ -469,12 +567,37 @@
   function formatExactQuantity(item) {
     if (item.unit_type === "free") return "";
 
+    if (item.unit_type === "weight_g" && item.total_quantity >= 1000) {
+      const kilograms = new Intl.NumberFormat("pt-BR", {
+        maximumFractionDigits: 2,
+      }).format(item.total_quantity / 1000);
+      const weight = `${kilograms}kg`;
+      if (item.category === "suplementos" && item.name.toLowerCase().includes("whey")) {
+        if (item.total_quantity === 15) return `${weight} (meio scoop)`;
+        const scoops = item.total_quantity / 30;
+        const scoopText = new Intl.NumberFormat("pt-BR", {
+          maximumFractionDigits: 1,
+        }).format(scoops);
+        return `${weight} (${scoopText} ${scoops === 1 ? "scoop" : "scoops"})`;
+      }
+      return weight;
+    }
+
     const quantity = new Intl.NumberFormat("pt-BR", {
       maximumFractionDigits: 1,
     }).format(item.total_quantity);
     const unit = (item.unit || "").trim();
     if (!unit) return quantity;
-    return unit === "g" || unit === "ml" ? `${quantity}${unit}` : `${quantity} ${unit}`;
+    const formatted = unit === "g" || unit === "ml" ? `${quantity}${unit}` : `${quantity} ${unit}`;
+    if (item.unit_type === "weight_g" && item.category === "suplementos" && item.name.toLowerCase().includes("whey")) {
+      if (item.total_quantity === 15) return `${formatted} (meio scoop)`;
+      const scoops = item.total_quantity / 30;
+      const scoopText = new Intl.NumberFormat("pt-BR", {
+        maximumFractionDigits: 1,
+      }).format(scoops);
+      return `${formatted} (${scoopText} ${scoops === 1 ? "scoop" : "scoops"})`;
+    }
+    return formatted;
   }
 
   function updateProgress() {
@@ -575,13 +698,10 @@
   const storedDays = localStorage.getItem(STORAGE_KEYS.days);
   if (storedDays) daysInput.value = clampDays(storedDays);
 
+  plans = getStoredPlans();
   const storedPlanId = getStoredPlanId();
   if (storedPlanId) {
-    showPlanScreen(
-      storedPlanId,
-      localStorage.getItem(STORAGE_KEYS.patientName),
-      localStorage.getItem(STORAGE_KEYS.mealsFound)
-    );
+    showPlanScreen();
     loadPlanMeals(storedPlanId);
   } else {
     showUploadScreen();

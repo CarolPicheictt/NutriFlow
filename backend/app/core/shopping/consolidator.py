@@ -163,7 +163,18 @@ class ShoppingConsolidator:
             meal_name: Nome da refeição de origem, para rastreabilidade.
         """
         norm_name = self._name_normalizer.normalize(food_item.name)
-        unit_type = self._unit_normalizer.classify(food_item.unit)
+        source_unit = food_item.unit or ""
+        unit_type = self._unit_normalizer.classify(source_unit)
+        quantity = food_item.quantity or 0
+        is_whey = "whey" in food_item.name.lower()
+        scoop_units = {"dosador", "dosadores", "scoop", "scoops", "dose", "doses"}
+        unit_tokens = self._unit_normalizer._tokenize(source_unit.lower())
+        if is_whey and unit_tokens & scoop_units:
+            unit_type = UnitType.WEIGHT_G
+            source_unit = "g"
+            quantity *= 30
+        elif "pão" in food_item.name.lower() and unit_type == UnitType.UNIT:
+            source_unit = "fatias"
 
         existing = consolidated.get(norm_name)
 
@@ -182,16 +193,18 @@ class ShoppingConsolidator:
                 existing.source_meals.append(meal_name)
             return
 
-        qty = food_item.quantity or 0
-        base_qty = self._unit_normalizer.to_base_unit(qty, food_item.unit or "")
+        base_qty = self._unit_normalizer.to_base_unit(quantity, source_unit)
 
         if existing is None:
+            display_unit = self._unit_normalizer.resolve_display_unit(
+                unit_type, source_unit
+            )
+            if "pão" in food_item.name.lower() and unit_type == UnitType.UNIT:
+                display_unit = "fatias"
             consolidated[norm_name] = ShoppingItem(
                 name=food_item.name,
                 total_quantity=base_qty,
-                unit=self._unit_normalizer.resolve_display_unit(
-                    unit_type, food_item.unit
-                ),
+                unit=display_unit,
                 unit_type=unit_type,
                 source_meals=[meal_name],
                 normalized_name=norm_name,

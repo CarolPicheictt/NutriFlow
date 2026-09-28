@@ -41,7 +41,8 @@ class UnitNormalizer:
     _VOLUME_KEYWORDS = {"ml", "l", "litro", "litros"}
     _UNIT_KEYWORDS = {
         "unidade", "unidades", "unidade(s)", "fatia", "fatias",
-        "colher", "colheres", "dosador", "dosadores",
+        "colher", "colheres", "dosador", "dosadores", "scoop",
+        "scoops", "dose", "doses",
     }
 
     def classify(self, unit: Optional[str]) -> UnitType:
@@ -124,6 +125,18 @@ class UnitNormalizer:
             UnitType.FREE: "à vontade",
         }
         return unit_map.get(unit_type, original_unit or "")
+
+    @staticmethod
+    def format_weight_quantity(quantity: float) -> str:
+        """Formata gramas em kg a partir de 1000 g, sem zeros desnecessários."""
+        if quantity >= 1000:
+            value = f"{quantity / 1000:.2f}".rstrip("0").rstrip(".")
+            return f"{value.replace('.', ',')}kg"
+
+        if quantity.is_integer():
+            return f"{int(quantity)}g"
+        value = f"{quantity:.1f}".replace(".", ",")
+        return f"{value}g"
 
     @staticmethod
     def _tokenize(unit_lower: str) -> set[str]:

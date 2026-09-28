@@ -32,6 +32,7 @@ Este README cobre o que **existe e funciona hoje**.
 | Exportar lista em texto (compartilhável) ou JSON | `GET /api/v1/shopping/{plan_id}/export` |
 | Persistência de planos em JSON (`data/plans/`) e checklist em memória | `services/plan_service.py`, `services/shopping_service.py` |
 | Interface web para usar todo o fluxo (upload, checklist, export) | `frontend/index.html` |
+| Agrupar várias dietas da casa em uma única lista de compras | `frontend/index.html`, `services/shopping_service.py` |
 | Upload de PDF do WebDiet e conversão direta para plano alimentar | `scrap_do_pdf.py`, `services/plan_service.py` |
 | Testes automatizados (núcleo + rotas) | `tests/` |
 
@@ -193,6 +194,10 @@ checklist com progresso, copiar/baixar a lista).
    e acesse `http://localhost:5500`.
 3. Se a API não estiver em `http://127.0.0.1:8000`, ajuste o endereço no
    link "Endereço da API" no topo da página.
+
+Você pode selecionar várias dietas no primeiro envio ou usar "Adicionar
+dieta" depois de importar a primeira. Os alimentos repetidos são somados
+e exibidos em uma lista única para a casa.
 
 O plano importado e o número de dias ficam salvos no navegador
 (`localStorage`), então recarregar a página não perde o progresso do

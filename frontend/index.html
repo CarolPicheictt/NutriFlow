@@ -42,11 +42,11 @@
       <button class="upload-tab active" id="jsonTab" type="button" role="tab" aria-selected="true">JSON</button>
       <button class="upload-tab" id="pdfTab" type="button" role="tab" aria-selected="false">PDF</button>
     </div>
-    <p id="uploadDescription">Selecione o arquivo JSON do seu plano alimentar.</p>
-    <button class="btn btn-primary" id="pickFileBtn" type="button">Selecionar arquivo JSON</button>
-    <input type="file" id="fileInput" accept="application/json,.json" />
+    <p id="uploadDescription">Selecione uma ou mais dietas em JSON para somar as compras da casa.</p>
+    <button class="btn btn-primary" id="pickFileBtn" type="button">Selecionar dietas JSON</button>
     <div class="inline-error" id="uploadError"></div>
   </section>
+  <input type="file" id="fileInput" accept="application/json,.json" multiple />
 
   <!-- ESTADO: plano carregado -->
   <section id="planSection" style="display:none;">
@@ -57,7 +57,10 @@
           <strong id="patientName">—</strong>
           <span id="planMeta">—</span>
         </div>
-        <button class="btn btn-text" id="changePlanBtn" type="button">Trocar plano</button>
+        <div class="plan-actions">
+          <button class="btn btn-secondary" id="addPlansBtn" type="button">Adicionar dieta</button>
+          <button class="btn btn-text" id="changePlanBtn" type="button">Trocar planos</button>
+        </div>
       </div>
 
       <section class="meal-filter" aria-labelledby="mealFilterTitle">
@@ -70,7 +73,6 @@
         </div>
         <div id="mealOptions" class="meal-options" aria-label="Selecione as refeições"></div>
         <div class="meal-filter-actions">
-          <button class="btn btn-secondary" id="applyMealsBtn" type="button" disabled>Aplicar refeições</button>
           <span class="inline-error" id="mealSelectionError" role="alert"></span>
         </div>
       </section>

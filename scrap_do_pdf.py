@@ -1006,9 +1006,10 @@ class WebDietParser:
         self._extractor = PDFTextExtractor(pdf_path)
         self._patient_parser = PatientInfoParser()
         self._meal_parser = MealParser()
-        self._nutrition_parser = NutritionalReportParser()
-        self._shopping_parser = ShoppingListParser()
-        self._recipe_parser = RecipeParser()
+        # Parsers mantidos disponíveis, mas essas seções ficam desativadas
+        # no fluxo principal até serem implementadas no produto.
+        # self._nutrition_parser = NutritionalReportParser()
+        # self._shopping_parser = ShoppingListParser()
 
     def parse(self) -> DietPlan:
         """
@@ -1018,9 +1019,10 @@ class WebDietParser:
             1. Extrai texto bruto do PDF.
             2. Extrai metadados do paciente.
             3. Extrai refeições e alimentos.
-            4. Extrai relatório nutricional e vincula às refeições.
-            5. Extrai lista de compras.
-            6. Extrai receitas culinárias.
+            4. Ignora relatório nutricional, lista de compras e receitas.
+
+        Os campos ``nutritional_summary``, ``shopping_list`` e ``recipes``
+        ficam com os valores vazios padrão do modelo nesta versão.
 
         Returns:
             DietPlan com todos os dados estruturados e normalizados.
@@ -1029,20 +1031,16 @@ class WebDietParser:
 
         patient = self._patient_parser.parse(full_text)
         meals = self._meal_parser.parse(full_text)
-        nutritional_summary, meal_nutrients = self._nutrition_parser.parse(full_text)
-        shopping_list = self._shopping_parser.parse(full_text)
-        recipes = self._recipe_parser.parse(full_text)
 
-        # Vincula os nutrientes a cada refeição pelo nome
-        meals = self._bind_nutrients_to_meals(meals, meal_nutrients)
+        # nutritional_summary, meal_nutrients = self._nutrition_parser.parse(full_text)
+        # shopping_list = self._shopping_parser.parse(full_text)
+        # recipes = self._recipe_parser.parse(full_text)
+        # meals = self._bind_nutrients_to_meals(meals, meal_nutrients)
 
         return DietPlan(
             source=DataSource.WEBDIET_PDF,
             patient=patient,
             meals=meals,
-            nutritional_summary=nutritional_summary,
-            shopping_list=shopping_list,
-            recipes=recipes,
         )
 
     @staticmethod

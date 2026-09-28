@@ -184,14 +184,27 @@ class ShoppingCalculator:
             if "ovo" in item.name.lower() and dozens > 0:
                 extra = f" + {remainder}" if remainder else ""
                 return f"{int(qty)} unidades ({dozens} dúzia{extra})"
-            return f"{int(qty)} unidades"
+            unit_label = item.unit or "unidades"
+            if unit_label == "fatias":
+                unit_label = "fatia" if qty == 1 else "fatias"
+            elif unit_label == "un":
+                unit_label = "unidade" if qty == 1 else "unidades"
+            return f"{int(qty)} {unit_label}"
 
         if item.unit_type == UnitType.WEIGHT_G:
+            if item.category == "suplementos":
+                return self._supplement_package_suggestion(qty)
+            if self._is_meat(item.name):
+                packages = max(1, int((qty + 499) // 500))
+                package_weight = packages * 500
+                package_text = UnitNormalizer.format_weight_quantity(package_weight)
+                package_label = "pacote" if packages == 1 else "pacotes"
+                return f"{packages} {package_label} (~{package_text})"
             if qty >= 1000:
-                return f"{qty / 1000:.1f}kg"
+                return UnitNormalizer.format_weight_quantity(qty)
             # Arredonda para a embalagem comercial mais próxima.
             rounded = self._round_to_package(qty)
-            return f"~{rounded}g"
+            return f"~{UnitNormalizer.format_weight_quantity(rounded)}"
 
         if item.unit_type == UnitType.VOLUME_ML:
             if qty >= 1000:
@@ -199,6 +212,39 @@ class ShoppingCalculator:
             return f"{qty:.0f}ml"
 
         return f"{qty} {item.unit}" if item.unit else None
+
+    @staticmethod
+    def _is_meat(name: str) -> bool:
+        meat_keywords = (
+            "frango", "sobrecoxa", "peito", "carne", "boi", "patinho",
+            "acém", "acem", "peixe", "tilápia", "tilapia", "salmão",
+            "salmao", "atum", "sardinha", "peru", "linguiça", "linguica",
+            "bacon", "camarão", "camarao", "suíno", "suino", "porco",
+            "costela",
+        )
+        name_lower = name.lower()
+        return any(keyword in name_lower for keyword in meat_keywords)
+
+    @staticmethod
+    def _supplement_package_suggestion(quantity: float) -> str:
+        package_sizes = (
+            (4500, "pacote atacado de 4,5kg"),
+            (2000, "pacote família de 2kg"),
+            (900, "pote intermediário de 900g"),
+            (500, "pote pequeno de 500g"),
+            (30, "sachê individual de 30g"),
+        )
+        if quantity <= 4500:
+            size, label = next((size, label) for size, label in reversed(package_sizes) if quantity <= size)
+            return f"1 {label}"
+
+        bulk_count = int(quantity // 4500)
+        remainder = quantity - bulk_count * 4500
+        parts = [f"{bulk_count} pacotes atacado de 4,5kg"]
+        if remainder > 0:
+            size, label = next((size, label) for size, label in reversed(package_sizes) if remainder <= size)
+            parts.append(f"1 {label}")
+        return " + ".join(parts)
 
     @staticmethod
     def _round_to_package(grams: float) -> int:

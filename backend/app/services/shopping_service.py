@@ -17,9 +17,11 @@ from dataclasses import dataclass, field
 from typing import Optional, Protocol
 from uuid import UUID
 
+from app.core.models.diet_plan import DietPlan
 from app.core.models.shopping_list import ShoppingItem
 from app.core.shopping.calculator import ShoppingCalculator
 from app.core.shopping.consolidator import FoodNameNormalizer
+from app.core.shopping.units import UnitNormalizer
 from app.services.plan_service import PlanService
 
 
@@ -92,6 +94,7 @@ class ShoppingService:
         plan_id: UUID,
         days: int,
         meal_names: Optional[list[str]] = None,
+        additional_plan_ids: Optional[list[UUID]] = None,
     ) -> Optional[ShoppingListResult]:
         """
         Calcula a lista de compras de um plano, agrupada por categoria.
@@ -111,7 +114,7 @@ class ShoppingService:
             ``ShoppingListResult`` com os itens agrupados por categoria, ou
             ``None`` se o plano não existir.
         """
-        diet_plan = self._plan_service.get_plan(plan_id)
+        diet_plan = self._get_combined_plan(plan_id, additional_plan_ids)
         if diet_plan is None:
             return None
 
@@ -129,7 +132,11 @@ class ShoppingService:
             categories=categories,
         )
 
-    def get_available_meals(self, plan_id: UUID) -> Optional[list[str]]:
+    def get_available_meals(
+        self,
+        plan_id: UUID,
+        additional_plan_ids: Optional[list[UUID]] = None,
+    ) -> Optional[list[str]]:
         """
         Retorna os nomes das refeições do plano, na ordem em que aparecem.
 
@@ -142,10 +149,24 @@ class ShoppingService:
         Returns:
             Lista de nomes de refeições, ou ``None`` se o plano não existir.
         """
-        diet_plan = self._plan_service.get_plan(plan_id)
+        diet_plan = self._get_combined_plan(plan_id, additional_plan_ids)
         if diet_plan is None:
             return None
-        return [meal.name for meal in diet_plan.meals]
+        return list(dict.fromkeys(meal.name for meal in diet_plan.meals))
+
+    def _get_combined_plan(
+        self,
+        plan_id: UUID,
+        additional_plan_ids: Optional[list[UUID]] = None,
+    ) -> Optional[DietPlan]:
+        """Combina as refeições dos planos, ignorando IDs repetidos."""
+        plan_ids = dict.fromkeys([plan_id, *(additional_plan_ids or [])])
+        plans = [self._plan_service.get_plan(current_id) for current_id in plan_ids]
+        if any(plan is None for plan in plans):
+            return None
+
+        meals = [meal for plan in plans if plan is not None for meal in plan.meals]
+        return DietPlan(meals=meals)
 
     async def update_item_check(
         self, plan_id: UUID, item_name: str, checked: bool
@@ -175,6 +196,7 @@ class ShoppingService:
         days: int,
         fmt: str,
         meal_names: Optional[list[str]] = None,
+        additional_plan_ids: Optional[list[UUID]] = None,
     ) -> Optional[dict | str]:
         """
         Exporta a lista de compras em formato texto ou JSON.
@@ -195,7 +217,9 @@ class ShoppingService:
         Raises:
             ValueError: ``fmt`` diferente de ``"text"``/``"json"``.
         """
-        result = await self.get_shopping_list(plan_id, days, meal_names)
+        result = await self.get_shopping_list(
+            plan_id, days, meal_names, additional_plan_ids
+        )
         if result is None:
             return None
 
@@ -254,6 +278,15 @@ class ShoppingService:
             return ""
 
         quantity = item.total_quantity
+        if item.unit_type.value == "weight_g":
+            formatted = UnitNormalizer.format_weight_quantity(quantity)
+            if item.category == "suplementos" and "whey" in item.name.lower():
+                if quantity == 15:
+                    return f"{formatted} (meio scoop)"
+                scoops = f"{quantity / 30:.1f}".rstrip("0").rstrip(".").replace(".", ",")
+                return f"{formatted} ({scoops} {'scoop' if quantity == 30 else 'scoops'})"
+            return formatted
+
         if quantity.is_integer():
             quantity_text = f"{int(quantity):,}".replace(",", ".")
         else:

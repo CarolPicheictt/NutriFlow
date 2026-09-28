@@ -100,6 +100,52 @@ def test_shopping_list_can_filter_selected_meals(
     assert export_response.json()["total_items"] == filtered_list["total_items"]
 
 
+def test_shopping_list_combines_multiple_plans(
+    client: TestClient, uploaded_plan_id: str, diet_plan_json: str
+):
+    second_upload = client.post(
+        "/api/v1/upload",
+        files={"file": ("second-plan.json", diet_plan_json.encode("utf-8"), "application/json")},
+    )
+    assert second_upload.status_code == 200
+    second_plan_id = second_upload.json()["plan_id"]
+
+    single = client.get(f"/api/v1/shopping/{uploaded_plan_id}").json()
+    combined_response = client.get(
+        f"/api/v1/shopping/{uploaded_plan_id}",
+        params={"additional_plan_ids": second_plan_id},
+    )
+
+    assert combined_response.status_code == 200
+    combined = combined_response.json()
+    single_items = {
+        item["name"]: item["total_quantity"]
+        for items in single["categories"].values()
+        for item in items
+    }
+    combined_items = {
+        item["name"]: item["total_quantity"]
+        for items in combined["categories"].values()
+        for item in items
+    }
+    assert combined["total_items"] == single["total_items"]
+    assert combined_items.keys() == single_items.keys()
+    assert all(combined_items[name] == quantity * 2 for name, quantity in single_items.items())
+
+    meals_response = client.get(
+        f"/api/v1/plans/{uploaded_plan_id}/meals",
+        params={"additional_plan_ids": second_plan_id},
+    )
+    assert len(meals_response.json()["meals"]) == 7
+
+    export_response = client.get(
+        f"/api/v1/shopping/{uploaded_plan_id}/export",
+        params={"fmt": "json", "additional_plan_ids": second_plan_id},
+    )
+    assert export_response.status_code == 200
+    assert export_response.json()["total_items"] == combined["total_items"]
+
+
 def test_shopping_list_days_support_31_and_reject_values_outside_range(
     client: TestClient, uploaded_plan_id: str
 ):

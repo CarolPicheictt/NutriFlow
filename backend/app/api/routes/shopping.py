@@ -107,10 +107,11 @@ async def upload_diet(
 @router.get("/plans/{plan_id}/meals", response_model=MealsResponse)
 async def get_plan_meals(
     plan_id: UUID,
+    additional_plan_ids: list[UUID] | None = Query(None),
     service: ShoppingService = Depends(get_shopping_service),
 ) -> MealsResponse:
     """Retorna os nomes das refeições disponíveis para seleção."""
-    meals = service.get_available_meals(plan_id)
+    meals = service.get_available_meals(plan_id, additional_plan_ids)
     if meals is None:
         raise HTTPException(status_code=404, detail="Plano não encontrado.")
     return MealsResponse(meals=meals)
@@ -121,6 +122,7 @@ async def get_shopping_list(
     plan_id: UUID,
     days: int = Query(7, ge=1, le=31),
     meal_names: list[str] | None = Query(None),
+    additional_plan_ids: list[UUID] | None = Query(None),
     service: ShoppingService = Depends(get_shopping_service),
 ) -> ShoppingListResponse:
     """
@@ -133,7 +135,9 @@ async def get_shopping_list(
     Returns:
         ``ShoppingListResponse`` com itens agrupados por categoria.
     """
-    result = await service.get_shopping_list(plan_id, days, meal_names)
+    result = await service.get_shopping_list(
+        plan_id, days, meal_names, additional_plan_ids
+    )
     if result is None:
         raise HTTPException(status_code=404, detail="Plano não encontrado.")
 
@@ -175,6 +179,7 @@ async def export_shopping_list(
     days: int = Query(7, ge=1, le=31),
     fmt: str = Query("text", pattern="^(text|json)$"),
     meal_names: list[str] | None = Query(None),
+    additional_plan_ids: list[UUID] | None = Query(None),
     service: ShoppingService = Depends(get_shopping_service),
 ):
     """
@@ -189,7 +194,9 @@ async def export_shopping_list(
         Texto pronto para copiar/compartilhar (``fmt="text"``) ou um objeto
         JSON equivalente (``fmt="json"``).
     """
-    result = await service.export_list(plan_id, days, fmt, meal_names)
+    result = await service.export_list(
+        plan_id, days, fmt, meal_names, additional_plan_ids
+    )
     if result is None:
         raise HTTPException(status_code=404, detail="Plano não encontrado.")
     if fmt == "text":
