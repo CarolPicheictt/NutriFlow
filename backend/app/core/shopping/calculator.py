@@ -230,8 +230,8 @@ class ShoppingCalculator:
         package_sizes = (
             (4500, "pacote atacado de 4,5kg"),
             (2000, "pacote família de 2kg"),
-            (900, "pote intermediário de 900g"),
-            (500, "pote pequeno de 500g"),
+            (900, "pacote intermediário de 900g"),
+            (500, "pacote pequeno de 500g"),
             (30, "sachê individual de 30g"),
         )
         if quantity <= 4500:

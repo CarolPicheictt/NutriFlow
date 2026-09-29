@@ -117,6 +117,12 @@ def test_substitutions_default_to_original_and_can_be_selected(
     default_items = [item for items in default["categories"].values() for item in items]
     assert not any(item["name"] == "Queijo branco" for item in default_items)
 
+    default_text = client.get(
+        f"/api/v1/shopping/{uploaded_plan_id}/export",
+        params={"fmt": "text"},
+    ).text
+    assert "*Queijo branco*" not in default_text
+
     selected_response = client.get(
         f"/api/v1/shopping/{uploaded_plan_id}",
         params={"substitution_choices": json.dumps(selected_choices)},
@@ -139,6 +145,14 @@ def test_substitutions_default_to_original_and_can_be_selected(
         item for items in export_response.json()["categories"].values() for item in items
     ]
     assert next(item for item in export_items if item["name"] == "Queijo branco")["total_quantity"] == 14
+
+    selected_text_response = client.get(
+        f"/api/v1/shopping/{uploaded_plan_id}/export",
+        params={"fmt": "text", "substitution_choices": json.dumps(selected_choices)},
+    )
+    assert selected_text_response.status_code == 200
+    assert "*Queijo branco*" in selected_text_response.text
+    assert "*Queijo branco -*" not in selected_text_response.text
 
     invalid_response = client.get(
         f"/api/v1/shopping/{uploaded_plan_id}",
