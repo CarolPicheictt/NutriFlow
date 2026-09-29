@@ -23,6 +23,7 @@ from app.core.models.shopping_list import (
     ShoppingItem,
     ShoppingSubstitutionGroup,
     ShoppingSubstitutionOption,
+    UnitType,
 )
 from app.core.shopping.calculator import ShoppingCalculator
 from app.core.shopping.consolidator import FoodNameNormalizer
@@ -102,6 +103,7 @@ class ShoppingService:
         meal_names: Optional[list[str]] = None,
         additional_plan_ids: Optional[list[UUID]] = None,
         substitution_choices: Optional[dict[str, str]] = None,
+        leftovers_grams: Optional[dict[str, float]] = None,
     ) -> Optional[ShoppingListResult]:
         """
         Calcula a lista de compras de um plano, agrupada por categoria.
@@ -129,7 +131,12 @@ class ShoppingService:
         selected_plan = self._apply_substitution_choices(
             diet_plan, replacement_items, substitution_choices or {}
         )
-        items = self._calculator.calculate(selected_plan, days=days, meal_names=meal_names)
+        items = self._calculator.calculate(
+            selected_plan,
+            days=days,
+            meal_names=meal_names,
+            leftovers_grams=leftovers_grams,
+        )
         self._apply_checklist(plan_id, items)
 
         categories: dict[str, list[ShoppingItem]] = {}
@@ -322,6 +329,7 @@ class ShoppingService:
         meal_names: Optional[list[str]] = None,
         additional_plan_ids: Optional[list[UUID]] = None,
         substitution_choices: Optional[dict[str, str]] = None,
+        leftovers_grams: Optional[dict[str, float]] = None,
     ) -> Optional[dict | str]:
         """
         Exporta a lista de compras em formato texto ou JSON.
@@ -343,7 +351,12 @@ class ShoppingService:
             ValueError: ``fmt`` diferente de ``"text"``/``"json"``.
         """
         result = await self.get_shopping_list(
-            plan_id, days, meal_names, additional_plan_ids, substitution_choices
+            plan_id,
+            days,
+            meal_names,
+            additional_plan_ids,
+            substitution_choices,
+            leftovers_grams,
         )
         if result is None:
             return None
@@ -380,7 +393,18 @@ class ShoppingService:
         day_label = "dia" if result.days == 1 else "dias"
         lines = [f"*🛒 Lista de compras para {result.days} {day_label}*", ""]
 
-        for category, items in sorted(result.categories.items()):
+        purchasable_categories = {
+            category: [
+                item for item in items
+                if item.unit_type != UnitType.WEIGHT_G or item.total_quantity > 0
+            ]
+            for category, items in result.categories.items()
+        }
+        purchasable_categories = {
+            category: items for category, items in purchasable_categories.items() if items
+        }
+
+        for category, items in sorted(purchasable_categories.items()):
             lines.append(f"*{category.upper()}*")
             for item in items:
                 mark = "✅" if item.checked else "☐"
@@ -394,8 +418,9 @@ class ShoppingService:
                 lines.append(f"- {mark} *{item.name}*{details}")
             lines.append("")
 
-        item_label = "item" if result.total_items == 1 else "itens"
-        lines.append(f"*Total: {result.total_items} {item_label}*")
+        total_items = sum(len(items) for items in purchasable_categories.values())
+        item_label = "item" if total_items == 1 else "itens"
+        lines.append(f"*Total: {total_items} {item_label}*")
         return "\n".join(lines).strip() + "\n"
 
     @staticmethod

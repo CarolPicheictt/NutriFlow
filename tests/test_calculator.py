@@ -75,3 +75,23 @@ def test_weight_display_and_meat_package_suggestion():
     assert items["Pão integral"].unit == "fatias"
     assert items["Pão integral"].purchase_suggestion == "2 fatias"
     assert items["Aveia"].purchase_suggestion == "~1kg"
+
+
+def test_leftovers_are_subtracted_after_scaling_and_zero_items_are_removed():
+    plan = DietPlan(meals=[Meal(name="Café", items=[
+        FoodItem(name="Aveia", quantity=200, unit="g"),
+        FoodItem(name="Banana", quantity=2, unit="unidade"),
+    ])])
+    calculator = ShoppingCalculator()
+
+    adjusted = calculator.calculate(plan, days=3, leftovers_grams={"Aveia": 250})
+    adjusted_by_name = {item.name: item for item in adjusted}
+    assert adjusted_by_name["Aveia"].total_quantity == 350
+    assert adjusted_by_name["Aveia"].purchase_suggestion == "~500g"
+    assert adjusted_by_name["Banana"].total_quantity == 6
+
+    covered = calculator.calculate(plan, days=3, leftovers_grams={"Aveia": 700})
+    covered_by_name = {item.name: item for item in covered}
+    assert covered_by_name["Aveia"].total_quantity == 0
+    assert covered_by_name["Aveia"].purchase_suggestion is None
+    assert covered_by_name["Banana"].total_quantity == 6

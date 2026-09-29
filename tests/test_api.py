@@ -154,6 +154,54 @@ def test_substitutions_default_to_original_and_can_be_selected(
     assert "*Queijo branco*" in selected_text_response.text
     assert "*Queijo branco -*" not in selected_text_response.text
 
+
+def test_leftovers_are_applied_to_shopping_list_and_copied_text(
+    client: TestClient, uploaded_plan_id: str
+):
+    leftovers = {"Aveia": 100}
+    response = client.get(
+        f"/api/v1/shopping/{uploaded_plan_id}",
+        params={"days": 7, "leftovers_grams": json.dumps(leftovers)},
+    )
+    assert response.status_code == 200
+    items = [item for values in response.json()["categories"].values() for item in values]
+    oats = next(item for item in items if item["name"] == "Aveia")
+    assert oats["total_quantity"] == 75
+
+    text_response = client.get(
+        f"/api/v1/shopping/{uploaded_plan_id}/export",
+        params={"days": 7, "fmt": "text", "leftovers_grams": json.dumps(leftovers)},
+    )
+    assert text_response.status_code == 200
+    assert "*Aveia* — 75g" in text_response.text
+    assert "*Aveia* — 175g" not in text_response.text
+
+    fully_covered = client.get(
+        f"/api/v1/shopping/{uploaded_plan_id}",
+        params={"days": 7, "leftovers_grams": json.dumps({"Aveia": 1000})},
+    )
+    remaining_items = [
+        item for values in fully_covered.json()["categories"].values() for item in values
+    ]
+    fully_covered_oats = next(item for item in remaining_items if item["name"] == "Aveia")
+    assert fully_covered_oats["total_quantity"] == 0
+
+    fully_covered_text = client.get(
+        f"/api/v1/shopping/{uploaded_plan_id}/export",
+        params={
+            "days": 7,
+            "fmt": "text",
+            "leftovers_grams": json.dumps({"Aveia": 1000}),
+        },
+    ).text
+    assert "*Aveia*" not in fully_covered_text
+
+    invalid_leftover = client.get(
+        f"/api/v1/shopping/{uploaded_plan_id}",
+        params={"leftovers_grams": json.dumps({"Aveia": -1})},
+    )
+    assert invalid_leftover.status_code == 422
+
     invalid_response = client.get(
         f"/api/v1/shopping/{uploaded_plan_id}",
         params={"substitution_choices": "not-json"},

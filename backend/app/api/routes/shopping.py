@@ -13,6 +13,7 @@ HTTP e delegam para os serviços de aplicação (``PlanService`` e
 from __future__ import annotations
 
 import json
+import math
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
@@ -84,6 +85,30 @@ def _decode_substitution_choices(raw_choices: str | None) -> dict[str, str] | No
     return choices
 
 
+def _decode_leftovers_grams(raw_leftovers: str | None) -> dict[str, float] | None:
+    if raw_leftovers is None:
+        return None
+    try:
+        leftovers = json.loads(raw_leftovers)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=422, detail="Quantidades de sobra inválidas.") from exc
+    if not isinstance(leftovers, dict):
+        raise HTTPException(status_code=422, detail="Quantidades de sobra inválidas.")
+
+    decoded: dict[str, float] = {}
+    for name, quantity in leftovers.items():
+        if (
+            not isinstance(name, str)
+            or isinstance(quantity, bool)
+            or not isinstance(quantity, (int, float))
+            or not math.isfinite(quantity)
+            or quantity < 0
+        ):
+            raise HTTPException(status_code=422, detail="Quantidades de sobra inválidas.")
+        decoded[name] = float(quantity)
+    return decoded
+
+
 @router.post("/upload", response_model=UploadResponse)
 async def upload_diet(
     file: UploadFile = File(...),
@@ -141,6 +166,7 @@ async def get_shopping_list(
     meal_names: list[str] | None = Query(None),
     additional_plan_ids: list[UUID] | None = Query(None),
     substitution_choices: str | None = Query(None),
+    leftovers_grams: str | None = Query(None),
     service: ShoppingService = Depends(get_shopping_service),
 ) -> ShoppingListResponse:
     """
@@ -159,6 +185,7 @@ async def get_shopping_list(
         meal_names,
         additional_plan_ids,
         _decode_substitution_choices(substitution_choices),
+        _decode_leftovers_grams(leftovers_grams),
     )
     if result is None:
         raise HTTPException(status_code=404, detail="Plano não encontrado.")
@@ -204,6 +231,7 @@ async def export_shopping_list(
     meal_names: list[str] | None = Query(None),
     additional_plan_ids: list[UUID] | None = Query(None),
     substitution_choices: str | None = Query(None),
+    leftovers_grams: str | None = Query(None),
     service: ShoppingService = Depends(get_shopping_service),
 ):
     """
@@ -225,6 +253,7 @@ async def export_shopping_list(
         meal_names,
         additional_plan_ids,
         _decode_substitution_choices(substitution_choices),
+        _decode_leftovers_grams(leftovers_grams),
     )
     if result is None:
         raise HTTPException(status_code=404, detail="Plano não encontrado.")

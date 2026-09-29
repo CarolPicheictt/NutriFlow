@@ -29,6 +29,7 @@ Este README cobre o que **existe e funciona hoje**.
 | Agrupar por categoria (proteínas, carboidratos, frutas, verduras e legumes, laticínios, gorduras, outros) | `core/shopping/categorizer.py` |
 | Sugestão de compra humanizada (ex.: "42 unidades (3 dúzias + 6)", "~500g") | `core/shopping/calculator.py` |
 | Checklist (marcar/desmarcar item como "já tenho em casa") | `PATCH /api/v1/checklist/{plan_id}` |
+| Abater ingredientes que sobraram da última compra, em gramas | Interface web e cálculo da lista |
 | Escolher uma substituição por refeição, mantendo o ingrediente prescrito como padrão | `core/shopping/`, `frontend/index.html` |
 | Exportar lista em texto (compartilhável) ou JSON | `GET /api/v1/shopping/{plan_id}/export` |
 | Persistência de planos em JSON (`data/plans/`) e checklist em memória | `services/plan_service.py`, `services/shopping_service.py` |
@@ -203,6 +204,11 @@ e exibidos em uma lista única para a casa.
 Quando o plano oferecer substituições, a lista mostra um seletor por
 refeição e ingrediente. O item prescrito fica selecionado por padrão; ao
 escolher uma alternativa, somente ela entra no cálculo e na exportação.
+
+Use "Sobrou?" para abrir a coluna de gramas ao lado das quantidades. O valor
+informado é descontado da necessidade total e salvo no navegador. Se a sobra
+cobrir toda a quantidade, o item continua visível para edição, mas não aparece
+no texto copiado.
 
 O plano importado e o número de dias ficam salvos no navegador
 (`localStorage`), então recarregar a página não perde o progresso do

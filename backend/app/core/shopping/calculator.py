@@ -66,6 +66,7 @@ class ShoppingCalculator:
         diet_plan: DietPlan,
         days: int = 7,
         meal_names: Optional[list[str]] = None,
+        leftovers_grams: Optional[dict[str, float]] = None,
     ) -> list[ShoppingItem]:
         """
         Calcula a lista de compras consolidada para N dias.
@@ -89,10 +90,22 @@ class ShoppingCalculator:
         """
         consolidated = self._consolidator.consolidate(diet_plan, meal_names)
         scaled = self._scale(consolidated, days)
+        scaled = self._subtract_leftovers(scaled, leftovers_grams or {})
         categorized = self._categorize(scaled)
         enriched = self._enrich_suggestions(categorized)
 
         return sorted(enriched, key=lambda item: (item.category, item.name))
+
+    @staticmethod
+    def _subtract_leftovers(
+        items: list[ShoppingItem], leftovers_grams: dict[str, float]
+    ) -> list[ShoppingItem]:
+        for item in items:
+            if item.unit_type == UnitType.WEIGHT_G:
+                leftover = leftovers_grams.get(item.name, 0.0)
+                item.total_quantity = round(max(0.0, item.total_quantity - leftover), 1)
+
+        return items
 
     def _scale(
         self,
@@ -192,6 +205,8 @@ class ShoppingCalculator:
             return f"{int(qty)} {unit_label}"
 
         if item.unit_type == UnitType.WEIGHT_G:
+            if qty <= 0:
+                return None
             if item.category == "suplementos":
                 return self._supplement_package_suggestion(qty)
             if self._is_meat(item.name):

@@ -20,9 +20,14 @@ Para medidas de pão considere que as unidades são fatias
 
 - Crie a funcionalidade de adicionar mais de um arquivo (duas pessoas diferentes que moram na mesma casa mas fazem a compra do mercado juntas e devem poder agrupar suas compras então crie o modo para que duas pessoas possam subir mais de uma dieta e no momento do cálculo dos ingredientes para comprar, elas se somem)
 
+- Implementei a escolha de substituições por refeição. A interface oferece um seletor junto à lista, com o ingrediente prescrito selecionado por padrão. 
+- crie um botão "Sobrou?" que sirva para abrir uma coluna lateral à direita do volume dos ingredientes da lista que sejam campos de texto que aceitem número em gramas, ao digitar um valor ali, este valor em gramas deve ser substituído do volume de compra do item, porque esta é a quantidade do ingrediente que sobrou da ulima compra. Apenas o valor já calculado com a subtração daquilo que sobrou deve aparecer na lista para copiar. 
 _______________________________________________
 
 - Sunday meal prep: os cálculos devem considerar que x gramas de frango pronto são y gramas de frango cru. fator de cocção
 - Indicação de preparação das refeições
 
 - Revisar para que ele pegue apenas os ingredientes da dieta e ignore a principio abas de relatorio de nutrientes, lista de compras e receita culinária
+- enviar direto por wpp? integração
+- criar a escrita riscada além do check quando já houver o produto
+- quando você puxa para baixo a tela, a parte amarela não gruda lá em cima

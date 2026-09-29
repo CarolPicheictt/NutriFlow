@@ -9,6 +9,7 @@
     plans: "nutriflow.plans",
     selectedMeals: "nutriflow.selectedMeals",
     substitutionChoices: "nutriflow.substitutionChoices",
+    leftoversGrams: "nutriflow.leftoversGrams",
     days: "nutriflow.days",
   };
 
@@ -55,12 +56,14 @@
   const daysMinus = el("daysMinus");
   const daysPlus = el("daysPlus");
   const refreshBtn = el("refreshBtn");
+  const leftoversToggle = el("leftoversToggle");
 
   const progressText = el("progressText");
   const progressFill = el("progressFill");
 
   const listContainer = el("listContainer");
   const shoppingHeading = el("shoppingHeading");
+  const leftoverColumnHeader = el("leftoverColumnHeader");
   const substitutionPanel = el("substitutionPanel");
   const substitutionOptions = el("substitutionOptions");
   const listError = el("listError");
@@ -75,6 +78,7 @@
   let availableMeals = [];
   let selectedMeals = [];
   let substitutionChoices = {};
+  let leftoversGrams = {};
   let uploadMode = "json";
   let isUpdatingList = false;
 
@@ -174,10 +178,12 @@
     localStorage.removeItem(STORAGE_KEYS.plans);
     localStorage.removeItem(STORAGE_KEYS.selectedMeals);
     localStorage.removeItem(STORAGE_KEYS.substitutionChoices);
+    localStorage.removeItem(STORAGE_KEYS.leftoversGrams);
     plans = [];
     availableMeals = [];
     selectedMeals = [];
     substitutionChoices = {};
+    leftoversGrams = {};
   }
 
   function getStoredPlanId() {
@@ -309,7 +315,9 @@
       if (!append) {
         localStorage.removeItem(STORAGE_KEYS.selectedMeals);
         localStorage.removeItem(STORAGE_KEYS.substitutionChoices);
+        localStorage.removeItem(STORAGE_KEYS.leftoversGrams);
         substitutionChoices = {};
+        leftoversGrams = {};
       }
       const previousMeals = [...availableMeals];
       const previousSelection = [...selectedMeals];
@@ -359,6 +367,12 @@
   });
 
   refreshBtn.addEventListener("click", loadShoppingList);
+  leftoversToggle.addEventListener("click", () => {
+    const isOpen = listContainer.classList.toggle("show-leftovers");
+    leftoverColumnHeader.hidden = !isOpen;
+    leftoversToggle.setAttribute("aria-pressed", String(isOpen));
+    leftoversToggle.textContent = isOpen ? "Ocultar sobras" : "Sobrou?";
+  });
 
   mealOptions.addEventListener("change", () => {
     selectedMeals = Array.from(
@@ -483,6 +497,12 @@
     const params = new URLSearchParams({ days: String(days) });
     if (format) params.set("fmt", format);
     appendAdditionalPlanIds(params);
+    const enteredLeftovers = Object.fromEntries(
+      Object.entries(leftoversGrams).filter(([, quantity]) => quantity > 0)
+    );
+    if (Object.keys(enteredLeftovers).length) {
+      params.set("leftovers_grams", JSON.stringify(enteredLeftovers));
+    }
     const selectedChoices = Object.fromEntries(
       Object.entries(substitutionChoices).filter(([, choice]) => choice !== "default")
     );
@@ -585,12 +605,13 @@
   }
 
   function renderItemRow(item) {
-    const row = document.createElement("label");
+    const row = document.createElement("div");
     row.className = "item-row" + (item.checked ? " checked" : "");
 
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
     checkbox.checked = !!item.checked;
+    checkbox.setAttribute("aria-label", `Marcar ${item.name} como já tenho`);
     checkbox.addEventListener("change", () => toggleChecked(item.name, checkbox.checked, row));
 
     const name = document.createElement("span");
@@ -622,11 +643,53 @@
         ? `compre ${purchaseSuggestion}`
         : purchaseSuggestion;
       details.appendChild(suggestion);
+    } else if (item.unit_type === "weight_g" && item.total_quantity === 0) {
+      const sufficient = document.createElement("span");
+      sufficient.className = "item-suggestion";
+      sufficient.textContent = "suficiente em casa";
+      details.appendChild(sufficient);
     }
 
     row.appendChild(checkbox);
     row.appendChild(name);
     row.appendChild(details);
+
+    if (item.unit_type === "weight_g") {
+      const leftoverCell = document.createElement("div");
+      leftoverCell.className = "leftover-cell";
+
+      const leftoverInput = document.createElement("input");
+      leftoverInput.className = "leftover-input";
+      leftoverInput.type = "number";
+      leftoverInput.min = "0";
+      leftoverInput.step = "any";
+      leftoverInput.inputMode = "decimal";
+      leftoverInput.value = leftoversGrams[item.name] || "";
+      leftoverInput.setAttribute("aria-label", `Quantidade que sobrou de ${item.name}, em gramas`);
+      leftoverInput.addEventListener("change", () => {
+        const rawValue = leftoverInput.value.trim();
+        if (!rawValue) {
+          delete leftoversGrams[item.name];
+        } else {
+          const quantity = Number(rawValue);
+          if (!Number.isFinite(quantity) || quantity < 0) {
+            leftoverInput.value = leftoversGrams[item.name] || "";
+            return;
+          }
+          if (quantity > 0) leftoversGrams[item.name] = quantity;
+          else delete leftoversGrams[item.name];
+        }
+        localStorage.setItem(STORAGE_KEYS.leftoversGrams, JSON.stringify(leftoversGrams));
+        loadShoppingList();
+      });
+
+      const unit = document.createElement("span");
+      unit.className = "leftover-unit";
+      unit.textContent = "g";
+      leftoverCell.append(leftoverInput, unit);
+      row.appendChild(leftoverCell);
+    }
+
     return row;
   }
 
@@ -767,6 +830,11 @@
     substitutionChoices = JSON.parse(localStorage.getItem(STORAGE_KEYS.substitutionChoices) || "{}") || {};
   } catch (_) {
     substitutionChoices = {};
+  }
+  try {
+    leftoversGrams = JSON.parse(localStorage.getItem(STORAGE_KEYS.leftoversGrams) || "{}") || {};
+  } catch (_) {
+    leftoversGrams = {};
   }
 
   plans = getStoredPlans();

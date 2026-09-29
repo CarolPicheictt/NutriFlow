@@ -90,6 +90,7 @@
         <button type="button" id="daysPlus" aria-label="Aumentar dias">+</button>
       </div>
       <button class="btn btn-primary" id="refreshBtn" type="button">Atualizar lista</button>
+      <button class="btn btn-primary floating-leftovers-toggle" id="leftoversToggle" type="button" aria-pressed="false">Sobrou?</button>
 
       <div class="progress-block">
         <div class="progress-text" id="progressText">0 de 0 itens marcados</div>
@@ -107,6 +108,9 @@
       </div>
       <div id="substitutionOptions" class="substitution-options"></div>
     </section>
+    <div id="leftoverColumnHeader" class="leftover-column-header" hidden aria-hidden="true">
+      <span></span><span></span><span></span><span><strong>Sobrou (g)</strong></span>
+    </div>
     <div id="listContainer" class="list-container"></div>
 
     <div class="inline-error" id="listError"></div>
