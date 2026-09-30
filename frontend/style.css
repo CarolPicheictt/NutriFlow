@@ -81,7 +81,12 @@ input[type=file]{display:none}
 .meal-filter-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
 .meal-filter-header h2{font:600 18px var(--serif);margin:0 0 3px}
 .meal-filter-header p{color:var(--muted);font-size:12px;margin:0}
-.meal-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.meal-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:0}
+.meal-person-group{min-width:0;padding:0 18px}
+.meal-person-group:first-child{padding-left:0}
+.meal-person-group+.meal-person-group{border-left:1px solid var(--border)}
+.meal-person-title{margin:0 0 10px;color:var(--muted);font-size:13px;font-weight:600}
+.meal-person-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .meal-option{display:flex;align-items:flex-start;gap:10px;min-width:0;padding:11px 14px;border-radius:16px;background:var(--bg);
   font-size:13px;line-height:1.4;cursor:pointer;transition:background .12s}
 .meal-option:has(input:checked){background:var(--primary-tint)}
@@ -93,7 +98,8 @@ input[type=file]{display:none}
 .substitution-panel[hidden]{display:none}
 .substitution-heading h3{margin:0;font:600 17px var(--serif)}
 .substitution-heading p{margin:4px 0 14px;color:var(--muted);font-size:12px}
-.substitution-options{display:grid;gap:12px}
+.substitution-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:0}
+.substitution-person-options{display:grid;gap:12px}
 .substitution-option{display:grid;grid-template-columns:minmax(150px,.7fr) minmax(0,1.3fr);align-items:center;gap:12px}
 .substitution-option label{font-size:13px}
 .substitution-option select{min-width:0;width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:12px;background:var(--bg);color:var(--ink);font:13px var(--sans)}
@@ -156,6 +162,8 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:48px}
   .plan-heading{align-items:flex-start;padding:20px}
   .plan-actions{flex-wrap:wrap;justify-content:flex-end}
   .meal-options{grid-template-columns:1fr}
+  .meal-person-options{grid-template-columns:1fr}
+  .substitution-options{grid-template-columns:1fr}
   .meal-filter-header{align-items:center}
   .substitution-option{grid-template-columns:1fr;gap:5px}
   .controls{flex-direction:column;align-items:stretch}

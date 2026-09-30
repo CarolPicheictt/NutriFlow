@@ -16,6 +16,7 @@ fácil de evoluir isoladamente.
 
 from __future__ import annotations
 
+from math import ceil
 from typing import Optional
 
 from app.core.models.diet_plan import DietPlan
@@ -129,7 +130,10 @@ class ShoppingCalculator:
 
         for item in consolidated.values():
             if item.unit_type != UnitType.FREE:
-                item.total_quantity = round(item.total_quantity * days, 1)
+                quantity = round(item.total_quantity * days, 1)
+                item.total_quantity = (
+                    ceil(quantity) if item.unit_type == UnitType.UNIT else quantity
+                )
             scaled.append(item)
 
         return scaled

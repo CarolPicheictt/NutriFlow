@@ -410,6 +410,11 @@ class MealParser:
     _RE_MEAL_HEADER = re.compile(
         r"^(\d{2}:\d{2})\s*[-–]\s*(.+)$", re.MULTILINE
     )
+    _RE_NON_MEAL_SECTION = re.compile(
+        r"^(?:Relatório de nutrientes|Lista de compras|Receita culinária|"
+        r"Receitas culinárias)\b",
+        re.MULTILINE | re.IGNORECASE,
+    )
 
     # Identifica linhas de alimento com quantidade e unidade
     # Exemplos:
@@ -428,7 +433,9 @@ class MealParser:
 
     # Identifica bloco de substituições
     _RE_SUBSTITUTION_BLOCK = re.compile(
-        r"Opções de substituição para (.+?):\s*\n(.+?)(?=\n\n|\n[A-Z]|\Z)",
+        r"Opções de substituição para (.+?):\s*(.+?)"
+        r"(?=[ \t]*[•·▪◦]?[ \t]*Opções de substituição para|"
+        r"\n\s*(?:Observações:|Acesse o app|Página \d)|\n\n|\Z)",
         re.DOTALL | re.IGNORECASE,
     )
 
@@ -480,6 +487,10 @@ class MealParser:
         Returns:
             Lista de tuplas (horário, nome_refeição, texto_do_bloco).
         """
+        section_end = self._RE_NON_MEAL_SECTION.search(text)
+        if section_end:
+            text = text[:section_end.start()]
+
         headers = list(self._RE_MEAL_HEADER.finditer(text))
         blocks: list[tuple[str, str, str]] = []
 
@@ -512,9 +523,20 @@ class MealParser:
             "página",
             "aluno",
         )
+        excluded_spans = [
+            match.span()
+            for pattern in (self._RE_SUBSTITUTION_BLOCK, self._RE_NOTES)
+            for match in pattern.finditer(block_text)
+        ]
 
-        for line in block_text.splitlines():
-            line = line.strip()
+        for line_match in re.finditer(r"^.*$", block_text, re.MULTILINE):
+            if any(
+                start <= line_match.start() < end
+                for start, end in excluded_spans
+            ):
+                continue
+
+            line = line_match.group().strip()
             if not line:
                 continue
             if any(kw in line.lower() for kw in skip_keywords):
@@ -593,15 +615,23 @@ class MealParser:
 
         for match in self._RE_SUBSTITUTION_BLOCK.finditer(block_text):
             original_food = match.group(1).strip()
-            sub_lines = match.group(2).strip().splitlines()
+            substitution_text = match.group(2).strip()
+            if re.search(r"\s*-\s*ou\s*-\s*", substitution_text, re.IGNORECASE):
+                sub_lines = re.split(
+                    r"\s*-\s*ou\s*-\s*",
+                    re.sub(r"\s*\n\s*", " ", substitution_text),
+                    flags=re.IGNORECASE,
+                )
+            else:
+                sub_lines = substitution_text.splitlines()
 
             for line in sub_lines:
-                line = line.strip(" -•")
+                line = line.strip(" -•\t")
                 if not line:
                     continue
 
                 # Formato: "Queijo branco - 2 Fatia(s) (60g)"
-                parts = line.split("-", 1)
+                parts = re.split(r"\s+-\s+", line, maxsplit=1)
                 sub_name = parts[0].strip()
                 sub_qty_raw = parts[1].strip() if len(parts) > 1 else None
 

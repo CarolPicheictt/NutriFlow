@@ -52,6 +52,45 @@ def test_upload_pdf_parses_and_stores_plan(client: TestClient):
     assert meals_response.json()["meals"]
 
 
+def test_natalya_lunch_returns_separate_substitution_groups(client: TestClient):
+    from pathlib import Path
+
+    pdf_path = Path(__file__).parent / "Plano alimentar - Natalya Picheictt.pdf"
+    upload = client.post(
+        "/api/v1/upload",
+        files={"file": (pdf_path.name, pdf_path.read_bytes(), "application/pdf")},
+    )
+    assert upload.status_code == 200, upload.text
+
+    response = client.get(f"/api/v1/shopping/{upload.json()['plan_id']}")
+    assert response.status_code == 200
+    lunch_groups = [
+        group for group in response.json()["substitution_groups"]
+        if group["meal_name"] == "Almoço"
+    ]
+
+    assert len(lunch_groups) == 2
+    groups_by_original = {group["original_name"]: group for group in lunch_groups}
+    assert [
+        option["name"] for option in groups_by_original["Arroz Branco"]["options"]
+    ] == ["Arroz Branco", "Batata inglesa", "Macarrão cozido", "Abóbora assada"]
+    assert [
+        option["name"]
+        for option in groups_by_original["Peito de frango sem pele grelhado"]["options"]
+    ] == [
+        "Peito de frango sem pele grelhado",
+        "Acém",
+        "Lagarto",
+        "Patinho grelhado",
+        "Tilápia",
+        "Coxão mole",
+        "Músculo bovino",
+        "Maminha",
+        "Sobrecoxa de frango sem pele assada",
+        "Lombo suíno",
+    ]
+
+
 def test_file_plan_repository_survives_recreation(real_diet_plan, tmp_path):
     plan_id = FilePlanRepository(tmp_path).save(real_diet_plan)
 
@@ -212,9 +251,17 @@ def test_leftovers_are_applied_to_shopping_list_and_copied_text(
 def test_shopping_list_combines_multiple_plans(
     client: TestClient, uploaded_plan_id: str, diet_plan_json: str
 ):
+    second_plan = json.loads(diet_plan_json)
+    second_plan["patient"]["patient_name"] = "Outra pessoa"
     second_upload = client.post(
         "/api/v1/upload",
-        files={"file": ("second-plan.json", diet_plan_json.encode("utf-8"), "application/json")},
+        files={
+            "file": (
+                "second-plan.json",
+                json.dumps(second_plan).encode("utf-8"),
+                "application/json",
+            )
+        },
     )
     assert second_upload.status_code == 200
     second_plan_id = second_upload.json()["plan_id"]
@@ -245,7 +292,31 @@ def test_shopping_list_combines_multiple_plans(
         f"/api/v1/plans/{uploaded_plan_id}/meals",
         params={"additional_plan_ids": second_plan_id},
     )
-    assert len(meals_response.json()["meals"]) == 7
+    available_meals = meals_response.json()["meals"]
+    assert len(available_meals) == 14
+    assert "Carolina Picheictt · Café da manhã" in available_meals
+    assert "Outra pessoa · Café da manhã" in available_meals
+
+    selected_meal = "Outra pessoa · Café da manhã"
+    filtered_response = client.get(
+        f"/api/v1/shopping/{uploaded_plan_id}",
+        params={
+            "additional_plan_ids": second_plan_id,
+            "meal_names": selected_meal,
+        },
+    )
+    assert filtered_response.status_code == 200
+    filtered_items = [
+        item
+        for items in filtered_response.json()["categories"].values()
+        for item in items
+    ]
+    assert filtered_items
+    assert all(item["source_meals"] == [selected_meal] for item in filtered_items)
+    assert any(
+        group["meal_name"] == "Outra pessoa · Café da manhã"
+        for group in combined["substitution_groups"]
+    )
 
     export_response = client.get(
         f"/api/v1/shopping/{uploaded_plan_id}/export",

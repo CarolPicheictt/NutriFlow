@@ -77,6 +77,7 @@
   let plans = [];
   let availableMeals = [];
   let selectedMeals = [];
+  let currentSubstitutionGroups = [];
   let substitutionChoices = {};
   let leftoversGrams = {};
   let uploadMode = "json";
@@ -182,6 +183,7 @@
     plans = [];
     availableMeals = [];
     selectedMeals = [];
+    currentSubstitutionGroups = [];
     substitutionChoices = {};
     leftoversGrams = {};
   }
@@ -380,6 +382,7 @@
     ).map((checkbox) => checkbox.value);
     localStorage.setItem(STORAGE_KEYS.selectedMeals, JSON.stringify(selectedMeals));
     updateMealSelectionControls();
+    renderSubstitutionGroups(currentSubstitutionGroups);
   });
 
   selectAllMealsBtn.addEventListener("click", () => {
@@ -387,6 +390,7 @@
     selectedMeals = selectAll ? [...availableMeals] : [];
     localStorage.setItem(STORAGE_KEYS.selectedMeals, JSON.stringify(selectedMeals));
     renderMealOptions();
+    renderSubstitutionGroups(currentSubstitutionGroups);
   });
 
   async function loadPlanMeals(planId, selectionContext = {}) {
@@ -421,19 +425,49 @@
 
   function renderMealOptions() {
     mealOptions.replaceChildren();
+    const groups = new Map();
     availableMeals.forEach((meal) => {
-      const label = document.createElement("label");
-      label.className = "meal-option";
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      checkbox.value = meal;
-      checkbox.checked = selectedMeals.includes(meal);
-      const name = document.createElement("span");
-      name.textContent = meal;
-      label.append(checkbox, name);
-      mealOptions.appendChild(label);
+      const { personName, label: mealName } = splitPersonLabel(meal);
+      if (!groups.has(personName)) groups.set(personName, []);
+      groups.get(personName).push({ value: meal, label: mealName });
+    });
+
+    groups.forEach((meals, personName) => {
+      const group = document.createElement("section");
+      group.className = "meal-person-group";
+
+      if (personName) {
+        const heading = document.createElement("h3");
+        heading.className = "meal-person-title";
+        heading.textContent = personName;
+        group.appendChild(heading);
+      }
+
+      const options = document.createElement("div");
+      options.className = "meal-person-options";
+      meals.forEach((meal) => {
+        const label = document.createElement("label");
+        label.className = "meal-option";
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = meal.value;
+        checkbox.checked = selectedMeals.includes(meal.value);
+        const name = document.createElement("span");
+        name.textContent = meal.label;
+        label.append(checkbox, name);
+        options.appendChild(label);
+      });
+      group.appendChild(options);
+      mealOptions.appendChild(group);
     });
     updateMealSelectionControls();
+  }
+
+  function splitPersonLabel(value) {
+    const separator = value.indexOf(" \u00b7 ");
+    return separator < 0
+      ? { personName: "", label: value }
+      : { personName: value.slice(0, separator), label: value.slice(separator + 3) };
   }
 
   function updateMealSelectionControls() {
@@ -517,7 +551,8 @@
 
   function renderList(categories, totalItems, days, substitutionGroups) {
     shoppingHeading.textContent = `Lista de compras para ${days} ${days === 1 ? "dia" : "dias"}`;
-    renderSubstitutionGroups(substitutionGroups);
+    currentSubstitutionGroups = substitutionGroups;
+    renderSubstitutionGroups(currentSubstitutionGroups);
     listContainer.innerHTML = "";
     listContainer.classList.remove("revealed");
 
@@ -542,47 +577,75 @@
 
   function renderSubstitutionGroups(groups) {
     substitutionOptions.replaceChildren();
-    substitutionPanel.hidden = !groups.length;
+    const visibleGroups = groups.filter((group) => selectedMeals.includes(group.meal_name));
+    substitutionPanel.hidden = !visibleGroups.length;
 
-    const validChoices = {};
-    groups.forEach((group) => {
-      const row = document.createElement("div");
-      row.className = "substitution-option";
+    const groupKeys = new Set(groups.map((group) => group.key));
+    const validChoices = Object.fromEntries(
+      Object.entries(substitutionChoices).filter(([key]) => groupKeys.has(key))
+    );
+    const groupsByPerson = new Map();
+    visibleGroups.forEach((group) => {
+      const { personName, label: mealName } = splitPersonLabel(group.meal_name);
+      if (!groupsByPerson.has(personName)) groupsByPerson.set(personName, []);
+      groupsByPerson.get(personName).push({ group, mealName });
+    });
 
-      const label = document.createElement("label");
-      const selectId = `substitution-${group.key}`;
-      label.htmlFor = selectId;
-      label.textContent = `${group.meal_name}: ${group.original_name}`;
+    groupsByPerson.forEach((personGroups, personName) => {
+      const personGroup = document.createElement("section");
+      personGroup.className = "meal-person-group";
+      if (personName) {
+        const heading = document.createElement("h3");
+        heading.className = "meal-person-title";
+        heading.textContent = personName;
+        personGroup.appendChild(heading);
+      }
 
-      const select = document.createElement("select");
-      select.id = selectId;
-      select.setAttribute("aria-label", `Substituição para ${group.original_name} em ${group.meal_name}`);
-      group.options.forEach((option) => {
-        const element = document.createElement("option");
-        element.value = option.key;
-        const amount = option.unit
-          ? ` · ${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(option.quantity)} ${option.unit}`
-          : "";
-        element.textContent = option.key === "default"
-          ? `Padrão: ${option.name}${amount}`
-          : `Substituir por: ${option.name}${amount}`;
-        select.appendChild(element);
+      const personOptions = document.createElement("div");
+      personOptions.className = "substitution-person-options";
+      personGroups.forEach(({ group, mealName }) => {
+        const row = document.createElement("div");
+        row.className = "substitution-option";
+
+        const label = document.createElement("label");
+        const selectId = `substitution-${group.key}`;
+        label.htmlFor = selectId;
+        const mealLabel = document.createElement("strong");
+        mealLabel.textContent = mealName;
+        label.append(mealLabel, document.createTextNode(`: ${group.original_name}`));
+
+        const select = document.createElement("select");
+        select.id = selectId;
+        select.setAttribute("aria-label", `Substituição para ${group.original_name} em ${group.meal_name}`);
+        group.options.forEach((option) => {
+          const element = document.createElement("option");
+          element.value = option.key;
+          const amount = option.unit
+            ? ` · ${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(option.quantity)} ${option.unit}`
+            : "";
+          element.textContent = option.key === "default"
+            ? `Padrão: ${option.name}${amount}`
+            : `Substituir por: ${option.name}${amount}`;
+          select.appendChild(element);
+        });
+
+        const savedChoice = validChoices[group.key];
+        select.value = group.options.some((option) => option.key === savedChoice)
+          ? savedChoice
+          : "default";
+        if (select.value !== "default") validChoices[group.key] = select.value;
+        select.addEventListener("change", () => {
+          if (select.value === "default") delete substitutionChoices[group.key];
+          else substitutionChoices[group.key] = select.value;
+          localStorage.setItem(STORAGE_KEYS.substitutionChoices, JSON.stringify(substitutionChoices));
+          loadShoppingList();
+        });
+
+        row.append(label, select);
+        personOptions.appendChild(row);
       });
-
-      const savedChoice = substitutionChoices[group.key];
-      select.value = group.options.some((option) => option.key === savedChoice)
-        ? savedChoice
-        : "default";
-      if (select.value !== "default") validChoices[group.key] = select.value;
-      select.addEventListener("change", () => {
-        if (select.value === "default") delete substitutionChoices[group.key];
-        else substitutionChoices[group.key] = select.value;
-        localStorage.setItem(STORAGE_KEYS.substitutionChoices, JSON.stringify(substitutionChoices));
-        loadShoppingList();
-      });
-
-      row.append(label, select);
-      substitutionOptions.appendChild(row);
+      personGroup.appendChild(personOptions);
+      substitutionOptions.appendChild(personGroup);
     });
 
     substitutionChoices = validChoices;

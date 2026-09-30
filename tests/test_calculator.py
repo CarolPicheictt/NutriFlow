@@ -41,6 +41,17 @@ def test_purchase_suggestion_eggs(real_diet_plan):
     assert "dúzia" in eggs.purchase_suggestion
 
 
+def test_fractional_egg_quantity_rounds_up_to_whole_eggs():
+    plan = DietPlan(meals=[Meal(name="Café da manhã", items=[
+        FoodItem(name="Ovo de galinha", quantity=2.5, unit="unidade(s)"),
+    ])])
+
+    eggs = ShoppingCalculator().calculate(plan, days=1)[0]
+
+    assert eggs.total_quantity == 3
+    assert eggs.purchase_suggestion == "3 unidades"
+
+
 def test_supplement_scoop_packages_and_whey_equivalence():
     plan = DietPlan(meals=[Meal(name="Lanche", items=[
         FoodItem(name="Whey protein", quantity=15, unit="g"),

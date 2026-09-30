@@ -184,7 +184,32 @@ class ShoppingService:
         if any(plan is None for plan in plans):
             return None
 
-        meals = [meal for plan in plans if plan is not None for meal in plan.meals]
+        valid_plans = [plan for plan in plans if plan is not None]
+        if len(valid_plans) == 1:
+            return DietPlan(meals=valid_plans[0].meals)
+
+        person_names = [
+            (plan.patient.patient_name or "").strip() or f"Pessoa {index + 1}"
+            for index, plan in enumerate(valid_plans)
+        ]
+        name_counts = {
+            name: person_names.count(name)
+            for name in set(person_names)
+        }
+        name_occurrences: dict[str, int] = {}
+        meals: list[Meal] = []
+
+        for person_name, plan in zip(person_names, valid_plans):
+            name_occurrences[person_name] = name_occurrences.get(person_name, 0) + 1
+            display_name = person_name
+            if name_counts[person_name] > 1:
+                display_name = f"{person_name} ({name_occurrences[person_name]})"
+
+            for meal in plan.meals:
+                identified_meal = meal.model_copy(deep=True)
+                identified_meal.name = f"{display_name} · {meal.name}"
+                meals.append(identified_meal)
+
         return DietPlan(meals=meals)
 
     def _build_substitution_groups(
