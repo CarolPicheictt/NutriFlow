@@ -68,6 +68,7 @@ class ShoppingCalculator:
         days: int = 7,
         meal_names: Optional[list[str]] = None,
         leftovers_grams: Optional[dict[str, float]] = None,
+        consider_cooking_factor: bool = False,
     ) -> list[ShoppingItem]:
         """
         Calcula a lista de compras consolidada para N dias.
@@ -89,7 +90,11 @@ class ShoppingCalculator:
         Returns:
             Lista de ``ShoppingItem`` ordenada por categoria e nome.
         """
-        consolidated = self._consolidator.consolidate(diet_plan, meal_names)
+        consolidated = self._consolidator.consolidate(
+            diet_plan,
+            meal_names,
+            consider_cooking_factor=consider_cooking_factor,
+        )
         scaled = self._scale(consolidated, days)
         scaled = self._subtract_leftovers(scaled, leftovers_grams or {})
         categorized = self._categorize(scaled)
@@ -134,6 +139,10 @@ class ShoppingCalculator:
                 item.total_quantity = (
                     ceil(quantity) if item.unit_type == UnitType.UNIT else quantity
                 )
+                if item.prescribed_quantity is not None:
+                    item.prescribed_quantity *= days
+                if item.calculated_quantity is not None:
+                    item.calculated_quantity *= days
             scaled.append(item)
 
         return scaled

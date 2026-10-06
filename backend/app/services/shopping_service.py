@@ -104,6 +104,7 @@ class ShoppingService:
         additional_plan_ids: Optional[list[UUID]] = None,
         substitution_choices: Optional[dict[str, str]] = None,
         leftovers_grams: Optional[dict[str, float]] = None,
+        consider_cooking_factor: bool = False,
     ) -> Optional[ShoppingListResult]:
         """
         Calcula a lista de compras de um plano, agrupada por categoria.
@@ -136,6 +137,7 @@ class ShoppingService:
             days=days,
             meal_names=meal_names,
             leftovers_grams=leftovers_grams,
+            consider_cooking_factor=consider_cooking_factor,
         )
         self._apply_checklist(plan_id, items)
 
@@ -322,6 +324,10 @@ class ShoppingService:
             unit=unit,
             raw_quantity=substitution.raw_quantity,
             substitution_for=substitution.substitution_for,
+            prescribed_state=substitution.prescribed_state,
+            cooking_method=substitution.cooking_method,
+            raw_form=substitution.raw_form,
+            cooked_form=substitution.cooked_form,
         )
 
     async def update_item_check(
@@ -355,6 +361,7 @@ class ShoppingService:
         additional_plan_ids: Optional[list[UUID]] = None,
         substitution_choices: Optional[dict[str, str]] = None,
         leftovers_grams: Optional[dict[str, float]] = None,
+        consider_cooking_factor: bool = False,
     ) -> Optional[dict | str]:
         """
         Exporta a lista de compras em formato texto ou JSON.
@@ -382,6 +389,7 @@ class ShoppingService:
             additional_plan_ids,
             substitution_choices,
             leftovers_grams,
+            consider_cooking_factor,
         )
         if result is None:
             return None

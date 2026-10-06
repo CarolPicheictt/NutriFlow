@@ -17,7 +17,8 @@ from __future__ import annotations
 from typing import Iterable, Optional
 
 from app.core.models.diet_plan import DietPlan, FoodItem
-from app.core.models.shopping_list import ShoppingItem, UnitType
+from app.core.models.shopping_list import CookingFactorInfo, ShoppingItem, UnitType
+from app.core.shopping.cooking import CookingFactor, calculate_food_quantity
 from app.core.shopping.units import UnitNormalizer
 
 
@@ -93,6 +94,8 @@ class ShoppingConsolidator:
         self,
         diet_plan: DietPlan,
         meal_names: Optional[Iterable[str]] = None,
+        consider_cooking_factor: bool = False,
+        target_state: str = "raw",
     ) -> dict[str, ShoppingItem]:
         """
         Percorre as refeições do plano e consolida alimentos iguais.
@@ -130,7 +133,13 @@ class ShoppingConsolidator:
                     continue
                 if self._is_nutrient_summary_row(item):
                     continue
-                self._merge_item(consolidated, item, meal.name)
+                self._merge_item(
+                    consolidated,
+                    item,
+                    meal.name,
+                    consider_cooking_factor,
+                    target_state,
+                )
 
         return consolidated
 
@@ -153,6 +162,8 @@ class ShoppingConsolidator:
         consolidated: dict[str, ShoppingItem],
         food_item: FoodItem,
         meal_name: str,
+        consider_cooking_factor: bool,
+        target_state: str,
     ) -> None:
         """
         Mescla um único ``FoodItem`` no dicionário de itens consolidados.
@@ -194,6 +205,20 @@ class ShoppingConsolidator:
             return
 
         base_qty = self._unit_normalizer.to_base_unit(quantity, source_unit)
+        calculation = None
+        calculated_qty = base_qty
+        if unit_type == UnitType.WEIGHT_G:
+            calculation = calculate_food_quantity(
+                prescribed_quantity=base_qty,
+                prescribed_state=food_item.prescribed_state,
+                target_state=target_state,
+                food=food_item.name,
+                cooking_method=food_item.cooking_method,
+                consider_cooking_factor=consider_cooking_factor,
+                raw_form=food_item.raw_form,
+                cooked_form=food_item.cooked_form,
+            )
+            calculated_qty = calculation.calculated_quantity
 
         if existing is None:
             display_unit = self._unit_normalizer.resolve_display_unit(
@@ -203,11 +228,24 @@ class ShoppingConsolidator:
                 display_unit = "fatias"
             consolidated[norm_name] = ShoppingItem(
                 name=food_item.name,
-                total_quantity=base_qty,
+                total_quantity=calculated_qty,
                 unit=display_unit,
                 unit_type=unit_type,
                 source_meals=[meal_name],
                 normalized_name=norm_name,
+                prescribed_quantity=base_qty,
+                weight_state=calculation.weight_state if calculation else None,
+                cooking_factor=(
+                    self._factor_info(calculation.cooking_factor)
+                    if calculation and calculation.cooking_factor
+                    else None
+                ),
+                cooking_factors=(
+                    [self._factor_info(calculation.cooking_factor)]
+                    if calculation and calculation.cooking_factor
+                    else []
+                ),
+                calculated_quantity=calculated_qty,
             )
             return
 
@@ -219,6 +257,23 @@ class ShoppingConsolidator:
                 existing.source_meals.append(meal_name)
             return
 
-        existing.total_quantity += base_qty
+        existing.total_quantity += calculated_qty
+        existing.prescribed_quantity = (existing.prescribed_quantity or 0) + base_qty
+        existing.calculated_quantity = (existing.calculated_quantity or 0) + calculated_qty
+        if calculation and existing.weight_state != calculation.weight_state:
+            existing.weight_state = None
+        if calculation and calculation.cooking_factor:
+            factor_info = self._factor_info(calculation.cooking_factor)
+            if factor_info not in existing.cooking_factors:
+                existing.cooking_factors.append(factor_info)
+            existing.cooking_factor = (
+                existing.cooking_factors[0]
+                if len(existing.cooking_factors) == 1
+                else None
+            )
         if meal_name not in existing.source_meals:
             existing.source_meals.append(meal_name)
+
+    @staticmethod
+    def _factor_info(factor: CookingFactor) -> CookingFactorInfo:
+        return CookingFactorInfo(**factor.__dict__)

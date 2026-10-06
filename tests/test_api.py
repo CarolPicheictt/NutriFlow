@@ -105,6 +105,50 @@ def test_shopping_list_for_missing_plan_returns_404(client: TestClient):
     assert response.status_code == 404
 
 
+def test_shopping_list_can_apply_workbook_cooking_factor(client: TestClient):
+    plan = {
+        "meals": [{
+            "name": "Almoço",
+            "items": [{
+                "name": "Peito de frango sem pele",
+                "quantity": 80,
+                "unit": "g",
+                "prescribed_state": "prepared",
+                "cooking_method": "grilling",
+            }],
+        }],
+    }
+    upload = client.post(
+        "/api/v1/upload",
+        files={"file": ("plan.json", json.dumps(plan).encode(), "application/json")},
+    )
+    plan_id = upload.json()["plan_id"]
+
+    unchanged = client.get(
+        f"/api/v1/shopping/{plan_id}", params={"days": 1}
+    ).json()
+    converted_response = client.get(
+        f"/api/v1/shopping/{plan_id}",
+        params={"days": 1, "consider_cooking_factor": "true"},
+    )
+
+    assert upload.status_code == 200
+    assert converted_response.status_code == 200
+    unchanged_item = next(iter(unchanged["categories"].values()))[0]
+    converted_item = next(iter(converted_response.json()["categories"].values()))[0]
+    assert unchanged_item["total_quantity"] == 80
+    assert converted_item["total_quantity"] == 111.1
+    assert converted_item["prescribed_quantity"] == 80
+    assert converted_item["calculated_quantity"] == 80 / 0.72
+    assert converted_item["weight_state"] == "prepared"
+    assert converted_item["cooking_factor"]["yield_factor"] == 0.72
+    assert converted_item["cooking_factor"]["data_status"] == "USDA"
+    assert converted_item["cooking_factor"]["confidence"] == "high"
+    assert converted_item["cooking_factor"]["source_reference"] == (
+        "USDA Cooking Yield Data for Meat and Poultry"
+    )
+
+
 def test_plan_meals_lists_meals_and_returns_404_for_missing_plan(
     client: TestClient, uploaded_plan_id: str
 ):

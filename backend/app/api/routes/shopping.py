@@ -167,6 +167,7 @@ async def get_shopping_list(
     additional_plan_ids: list[UUID] | None = Query(None),
     substitution_choices: str | None = Query(None),
     leftovers_grams: str | None = Query(None),
+    consider_cooking_factor: bool = Query(False),
     service: ShoppingService = Depends(get_shopping_service),
 ) -> ShoppingListResponse:
     """
@@ -186,6 +187,7 @@ async def get_shopping_list(
         additional_plan_ids,
         _decode_substitution_choices(substitution_choices),
         _decode_leftovers_grams(leftovers_grams),
+        consider_cooking_factor,
     )
     if result is None:
         raise HTTPException(status_code=404, detail="Plano não encontrado.")
@@ -232,6 +234,7 @@ async def export_shopping_list(
     additional_plan_ids: list[UUID] | None = Query(None),
     substitution_choices: str | None = Query(None),
     leftovers_grams: str | None = Query(None),
+    consider_cooking_factor: bool = Query(False),
     service: ShoppingService = Depends(get_shopping_service),
 ):
     """
@@ -254,6 +257,7 @@ async def export_shopping_list(
         additional_plan_ids,
         _decode_substitution_choices(substitution_choices),
         _decode_leftovers_grams(leftovers_grams),
+        consider_cooking_factor,
     )
     if result is None:
         raise HTTPException(status_code=404, detail="Plano não encontrado.")

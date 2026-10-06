@@ -11,6 +11,7 @@
     substitutionChoices: "nutriflow.substitutionChoices",
     leftoversGrams: "nutriflow.leftoversGrams",
     days: "nutriflow.days",
+    considerCookingFactor: "nutriflow.considerCookingFactor",
   };
 
   const CATEGORY_ORDER = [
@@ -57,6 +58,7 @@
   const daysPlus = el("daysPlus");
   const refreshBtn = el("refreshBtn");
   const leftoversToggle = el("leftoversToggle");
+  const cookingFactorToggle = el("cookingFactorToggle");
 
   const progressText = el("progressText");
   const progressFill = el("progressFill");
@@ -82,6 +84,7 @@
   let leftoversGrams = {};
   let uploadMode = "json";
   let isUpdatingList = false;
+  cookingFactorToggle.checked = localStorage.getItem(STORAGE_KEYS.considerCookingFactor) === "true";
 
   // ---------- utilidades ----------
 
@@ -369,6 +372,10 @@
   });
 
   refreshBtn.addEventListener("click", loadShoppingList);
+  cookingFactorToggle.addEventListener("change", () => {
+    localStorage.setItem(STORAGE_KEYS.considerCookingFactor, String(cookingFactorToggle.checked));
+    loadShoppingList();
+  });
   leftoversToggle.addEventListener("click", () => {
     const isOpen = listContainer.classList.toggle("show-leftovers");
     leftoverColumnHeader.hidden = !isOpen;
@@ -537,6 +544,7 @@
     if (Object.keys(enteredLeftovers).length) {
       params.set("leftovers_grams", JSON.stringify(enteredLeftovers));
     }
+    if (cookingFactorToggle.checked) params.set("consider_cooking_factor", "true");
     const selectedChoices = Object.fromEntries(
       Object.entries(substitutionChoices).filter(([, choice]) => choice !== "default")
     );
@@ -712,6 +720,19 @@
       sufficient.textContent = "suficiente em casa";
       details.appendChild(sufficient);
     }
+    if (item.cooking_factors && item.cooking_factors.length) {
+      const prescribed = formatGrams(item.prescribed_quantity);
+      const calculated = formatGrams(item.calculated_quantity);
+      const transition = document.createElement("span");
+      transition.className = "item-cooking-info";
+      transition.textContent = `${prescribed} ${item.weight_state === "prepared" ? "preparado" : "cru"} → ${calculated} cru`;
+      details.appendChild(transition);
+    } else if (cookingFactorToggle.checked && item.unit_type === "weight_g") {
+      const unavailable = document.createElement("span");
+      unavailable.className = "item-cooking-note";
+      unavailable.textContent = "Quantidade prescrita mantida: sem conversão aplicável";
+      details.appendChild(unavailable);
+    }
 
     row.appendChild(checkbox);
     row.appendChild(name);
@@ -790,6 +811,10 @@
       return `${formatted} (${scoopText} ${scoops === 1 ? "scoop" : "scoops"})`;
     }
     return formatted;
+  }
+
+  function formatGrams(quantity) {
+    return `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(quantity || 0)}g`;
   }
 
   function updateProgress() {

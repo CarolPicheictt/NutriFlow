@@ -36,6 +36,19 @@ class UnitType(str, Enum):
     UNKNOWN = "unknown"  # unidade não reconhecida
 
 
+class CookingFactorInfo(BaseModel):
+    """Proveniência integral do fator de cocção usado no cálculo."""
+
+    food_name: str
+    cooking_method: str
+    raw_form: str
+    cooked_form: str
+    yield_factor: float
+    data_status: str
+    source_reference: str
+    confidence: str
+
+
 class ShoppingItem(BaseModel):
     """
     Item consolidado da lista de compras.
@@ -63,6 +76,11 @@ class ShoppingItem(BaseModel):
     checked: bool = False
     source_meals: list[str] = Field(default_factory=list)
     purchase_suggestion: Optional[str] = None
+    prescribed_quantity: Optional[float] = None
+    weight_state: Optional[str] = None
+    cooking_factor: Optional[CookingFactorInfo] = None
+    cooking_factors: list[CookingFactorInfo] = Field(default_factory=list)
+    calculated_quantity: Optional[float] = None
     # Chave de deduplicação interna (ver FoodNameNormalizer). Não faz parte
     # do contrato da API (exclude=True): serve apenas para o checklist
     # localizar o item certo sem depender do nome de exibição, que pode

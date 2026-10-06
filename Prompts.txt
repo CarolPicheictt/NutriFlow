@@ -25,12 +25,14 @@ Para medidas de pão considere que as unidades são fatias
 - Revisar para que ele pegue apenas os ingredientes da dieta e ignore a principio abas de relatorio de nutrientes, lista de compras e receita culinária
 - quanto tiver mais de uma dieta no upload, nas substituições deve vir o nome da pessoa para quem vai a substituição.
 - quando está sendo indicado 2,5 ovos está falando para comprar 2 e não 3 - deve arredondar para cima
-
+- Os cálculos devem considerar que x gramas de frango pronto são y gramas de frango cru. fator de cocção
 _______________________________________________
 
-- Sunday meal prep: os cálculos devem considerar que x gramas de frango pronto são y gramas de frango cru. fator de cocção
+- Sunday meal prep
 - Indicação de preparação das refeições
 
+- integração com app de mercado + calculo do frete
+- criar uma forma para validar o sistema remotamente
+- verificar responsividade para celular
 - enviar direto por wpp? integração
 - criar a escrita riscada além do check quando já houver o produto
-- quando você puxa para baixo a tela, a parte amarela não gruda lá em cima

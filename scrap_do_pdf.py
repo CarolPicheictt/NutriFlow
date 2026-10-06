@@ -62,6 +62,10 @@ class FoodItem(BaseModel):
     unit: Optional[str] = None
     raw_quantity: Optional[str] = None
     substitution_for: Optional[str] = None
+    prescribed_state: Optional[str] = None
+    cooking_method: Optional[str] = None
+    raw_form: Optional[str] = None
+    cooked_form: Optional[str] = None
 
 
 class Meal(BaseModel):
