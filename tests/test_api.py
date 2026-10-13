@@ -475,3 +475,36 @@ def test_export_json_returns_structured_list(client: TestClient, uploaded_plan_i
 def test_export_for_missing_plan_returns_404(client: TestClient):
     response = client.get(f"/api/v1/shopping/{MISSING_PLAN_ID}/export")
     assert response.status_code == 404
+
+
+def test_get_plan_returns_stored_plan_and_404_when_missing(client: TestClient, diet_plan_json: str):
+    upload = client.post(
+        "/api/v1/upload",
+        files={"file": ("plan.json", diet_plan_json.encode("utf-8"), "application/json")},
+    ).json()
+
+    response = client.get(f"/api/v1/plans/{upload['plan_id']}")
+    assert response.status_code == 200
+    assert response.json()["patient"]["patient_name"] == "Carolina Picheictt"
+
+    assert client.get(f"/api/v1/plans/{MISSING_PLAN_ID}").status_code == 404
+
+
+def test_restore_plan_recreates_plan_with_same_id(client: TestClient, diet_plan_json: str):
+    """Simula o servidor ter reiniciado: o navegador reenvia a cópia local."""
+    plan_id = "11111111-2222-4333-8444-555555555555"
+    assert client.get(f"/api/v1/shopping/{plan_id}?days=7").status_code == 404
+
+    restored = client.put(f"/api/v1/plans/{plan_id}", content=diet_plan_json,
+                          headers={"Content-Type": "application/json"})
+    assert restored.status_code == 200
+    assert restored.json()["plan_id"] == plan_id
+
+    shopping = client.get(f"/api/v1/shopping/{plan_id}?days=7")
+    assert shopping.status_code == 200
+    assert shopping.json()["total_items"] > 0
+
+
+def test_restore_plan_rejects_invalid_body(client: TestClient):
+    response = client.put(f"/api/v1/plans/{MISSING_PLAN_ID}", json={"foo": "bar"})
+    assert response.status_code == 422

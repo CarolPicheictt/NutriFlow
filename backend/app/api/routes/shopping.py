@@ -21,6 +21,7 @@ from pydantic import BaseModel
 from starlette.responses import PlainTextResponse
 
 from app.api.dependencies import get_plan_service, get_shopping_service
+from app.core.models.diet_plan import DietPlan
 from app.core.models.shopping_list import ShoppingItem, ShoppingSubstitutionGroup
 from app.services.plan_service import (
     InvalidDietPlanError,
@@ -48,6 +49,13 @@ class ShoppingListResponse(BaseModel):
     total_items: int
     categories: dict[str, list[ShoppingItem]]
     substitution_groups: list[ShoppingSubstitutionGroup]
+
+
+class RestoreResponse(BaseModel):
+    """Retorno da restauração de um plano guardado no navegador."""
+
+    plan_id: UUID
+    message: str
 
 
 class MealsResponse(BaseModel):
@@ -144,6 +152,37 @@ async def upload_diet(
         meals_found=len(diet_plan.meals),
         message="Plano importado com sucesso",
     )
+
+
+@router.get("/plans/{plan_id}")
+async def get_plan(
+    plan_id: UUID,
+    service: PlanService = Depends(get_plan_service),
+) -> dict:
+    """
+    Devolve o plano armazenado (JSON), para o navegador guardar uma cópia
+    local (PDFs enviados também são convertidos e devolvidos aqui).
+    """
+    diet_plan = service.get_plan(plan_id)
+    if diet_plan is None:
+        raise HTTPException(status_code=404, detail="Plano não encontrado.")
+    return diet_plan.model_dump(mode="json")
+
+
+@router.put("/plans/{plan_id}", response_model=RestoreResponse)
+async def restore_plan(
+    plan_id: UUID,
+    diet_plan: DietPlan,
+    service: PlanService = Depends(get_plan_service),
+) -> RestoreResponse:
+    """
+    Restaura um plano com o ``plan_id`` original a partir da cópia guardada
+    no navegador. Usado quando o servidor reiniciou e perdeu o plano.
+    """
+    if not diet_plan.meals:
+        raise HTTPException(status_code=422, detail="Plano alimentar inválido: nenhuma refeição.")
+    service.restore_plan(plan_id, diet_plan)
+    return RestoreResponse(plan_id=plan_id, message="Plano restaurado")
 
 
 @router.get("/plans/{plan_id}/meals", response_model=MealsResponse)

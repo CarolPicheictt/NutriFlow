@@ -11,7 +11,6 @@ em arquivo ou em memória durante os testes.
 from __future__ import annotations
 
 import json
-import os
 import tempfile
 from pathlib import Path
 from typing import Optional, Protocol
@@ -32,12 +31,16 @@ class PlanRepository(Protocol):
     Interface de armazenamento de planos alimentares.
 
     Qualquer implementação (em memória, PostgreSQL, etc.) precisa apenas
-    destes três métodos. O ``PlanService`` depende apenas desta interface,
+    destes quatro métodos. O ``PlanService`` depende apenas desta interface,
     nunca de uma implementação concreta.
     """
 
     def save(self, diet_plan: DietPlan) -> UUID:
         """Persiste um plano e retorna o identificador gerado."""
+        ...
+
+    def save_as(self, plan_id: UUID, diet_plan: DietPlan) -> None:
+        """Persiste um plano sob um identificador já conhecido (restauração)."""
         ...
 
     def get(self, plan_id: UUID) -> Optional[DietPlan]:
@@ -66,6 +69,9 @@ class InMemoryPlanRepository:
         self._plans[plan_id] = diet_plan
         return plan_id
 
+    def save_as(self, plan_id: UUID, diet_plan: DietPlan) -> None:
+        self._plans[plan_id] = diet_plan
+
     def get(self, plan_id: UUID) -> Optional[DietPlan]:
         return self._plans.get(plan_id)
 
@@ -78,16 +84,17 @@ class FilePlanRepository:
 
     def __init__(self, storage_dir: Path | None = None) -> None:
         repo_root = Path(__file__).resolve().parents[3]
-        env_dir = os.environ.get("NUTRIFLOW_DATA_DIR")
-        default_dir = Path(env_dir) if env_dir else repo_root / "data" / "plans"
-        self._storage_dir = storage_dir or default_dir
+        self._storage_dir = storage_dir or repo_root / "data" / "plans"
 
     def save(self, diet_plan: DietPlan) -> UUID:
         plan_id = uuid4()
+        self.save_as(plan_id, diet_plan)
+        return plan_id
+
+    def save_as(self, plan_id: UUID, diet_plan: DietPlan) -> None:
         self._storage_dir.mkdir(parents=True, exist_ok=True)
         plan_path = self._path_for(plan_id)
         plan_path.write_text(diet_plan.model_dump_json(indent=2), encoding="utf-8")
-        return plan_id
 
     def get(self, plan_id: UUID) -> Optional[DietPlan]:
         plan_path = self._path_for(plan_id)
@@ -163,6 +170,13 @@ class PlanService:
     def get_plan(self, plan_id: UUID) -> Optional[DietPlan]:
         """Retorna o plano armazenado, ou ``None`` se não existir."""
         return self._repository.get(plan_id)
+
+    def restore_plan(self, plan_id: UUID, diet_plan: DietPlan) -> None:
+        """
+        Recoloca no servidor um plano guardado no navegador do usuário,
+        mantendo o ``plan_id`` original (o servidor pode ter reiniciado).
+        """
+        self._repository.save_as(plan_id, diet_plan)
 
     @staticmethod
     def _parse_json_plan(content: bytes) -> DietPlan:

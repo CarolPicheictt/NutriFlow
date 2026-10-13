@@ -12,6 +12,8 @@
     leftoversGrams: "nutriflow.leftoversGrams",
     days: "nutriflow.days",
     considerCookingFactor: "nutriflow.considerCookingFactor",
+    planData: "nutriflow.planData",   // cópia local do JSON de cada plano
+    checklist: "nutriflow.checklist", // itens marcados por plano
   };
 
   const CATEGORY_ORDER = [
@@ -106,10 +108,86 @@
     node.classList.add("show");
   }
 
+  // ---------- cópia local dos planos (localStorage) ----------
+  // O servidor pode "esquecer" os planos (reinício, plano gratuito que dorme).
+  // A cópia que vale fica aqui no navegador e é reenviada quando necessário.
+
+  const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+
+  function readStoredJson(key, fallback) {
+    try {
+      const value = JSON.parse(localStorage.getItem(key) || "null");
+      return value === null || value === undefined ? fallback : value;
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  function writeStoredJson(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (_) {
+      return false; // cota cheia ou armazenamento bloqueado: o app segue sem a cópia
+    }
+  }
+
+  async function cachePlanFromServer(planId) {
+    try {
+      const response = await fetch(apiBase() + "/api/v1/plans/" + planId);
+      if (!response.ok) return;
+      const cache = readStoredJson(STORAGE_KEYS.planData, {});
+      cache[planId] = await response.json();
+      writeStoredJson(STORAGE_KEYS.planData, cache);
+    } catch (_) {}
+  }
+
+  function saveChecklistState(planId, itemName, checked) {
+    const all = readStoredJson(STORAGE_KEYS.checklist, {});
+    const items = new Set(all[planId] || []);
+    if (checked) items.add(itemName); else items.delete(itemName);
+    all[planId] = [...items];
+    writeStoredJson(STORAGE_KEYS.checklist, all);
+  }
+
+  // Reenvia ao servidor os planos (e itens marcados) citados na URL que
+  // existem na cópia local. Retorna true se ao menos um plano foi restaurado.
+  async function restorePlansFromCache(path) {
+    const ids = [...new Set((path.match(UUID_RE) || []).map((id) => id.toLowerCase()))];
+    const cache = readStoredJson(STORAGE_KEYS.planData, {});
+    const checklist = readStoredJson(STORAGE_KEYS.checklist, {});
+    const jsonHeaders = { "Content-Type": "application/json" };
+    let restored = false;
+
+    for (const id of ids) {
+      if (!cache[id]) continue;
+      try {
+        const response = await fetch(apiBase() + "/api/v1/plans/" + id, {
+          method: "PUT",
+          headers: jsonHeaders,
+          body: JSON.stringify(cache[id]),
+        });
+        if (!response.ok) continue;
+        restored = true;
+        await Promise.all((checklist[id] || []).map((itemName) =>
+          fetch(apiBase() + "/api/v1/checklist/" + id, {
+            method: "PATCH",
+            headers: jsonHeaders,
+            body: JSON.stringify({ item_name: itemName, checked: true }),
+          }).catch(() => null)
+        ));
+      } catch (_) {}
+    }
+    return restored;
+  }
+
   async function apiFetch(path, options) {
     let response;
     try {
       response = await fetch(apiBase() + path, options);
+      if (response.status === 404 && await restorePlansFromCache(path)) {
+        response = await fetch(apiBase() + path, options); // tenta de novo, uma vez
+      }
     } catch (err) {
       throw new ApiError(
         0,
@@ -190,6 +268,8 @@
     localStorage.removeItem(STORAGE_KEYS.selectedMeals);
     localStorage.removeItem(STORAGE_KEYS.substitutionChoices);
     localStorage.removeItem(STORAGE_KEYS.leftoversGrams);
+    localStorage.removeItem(STORAGE_KEYS.planData);
+    localStorage.removeItem(STORAGE_KEYS.checklist);
     plans = [];
     availableMeals = [];
     selectedMeals = [];
@@ -308,6 +388,7 @@
               friendlyUploadError(response.status, body.detail, contentType)
             );
           }
+          await cachePlanFromServer(body.plan_id);
           importedPlans.push({
             plan_id: body.plan_id,
             patient_name: body.patient_name || file.name,
@@ -851,6 +932,7 @@
         body: JSON.stringify({ item_name: itemName, checked }),
       });
       if (!response.ok) throw new ApiError(response.status, "Não foi possível salvar essa marcação.");
+      saveChecklistState(planId, itemName, checked);
     } catch (err) {
       // reverte em caso de falha
       rowEl.classList.toggle("checked", !checked);

@@ -5,16 +5,25 @@ dependencies.py
 
 Injeção de dependências da API.
 
-Os planos são salvos em arquivos JSON e o checklist é mantido em memória.
+Por padrão, planos e checklist ficam apenas em memória do servidor: a cópia
+que vale é a guardada no navegador do usuário (localStorage), que o
+front-end reenvia (``PUT /api/v1/plans/{id}``) se o servidor tiver reiniciado.
+Defina ``NUTRIFLOW_DATA_DIR`` para também gravar os planos em arquivos JSON.
 Os serviços permanecem compartilhados entre as requisições do processo.
 """
 
 from __future__ import annotations
 
-from app.services.plan_service import FilePlanRepository, PlanService
+import os
+from pathlib import Path
+
+from app.services.plan_service import FilePlanRepository, InMemoryPlanRepository, PlanService
 from app.services.shopping_service import InMemoryChecklistRepository, ShoppingService
 
-_plan_service = PlanService(FilePlanRepository())
+_data_dir = os.environ.get("NUTRIFLOW_DATA_DIR")
+_plan_service = PlanService(
+    FilePlanRepository(Path(_data_dir)) if _data_dir else InMemoryPlanRepository()
+)
 _shopping_service = ShoppingService(
     plan_service=_plan_service,
     checklist_repository=InMemoryChecklistRepository(),
