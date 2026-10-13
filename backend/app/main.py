@@ -11,8 +11,11 @@ Uso local:
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.routes.shopping import router as shopping_router
 
@@ -44,3 +47,12 @@ app.include_router(shopping_router)
 async def health_check() -> dict[str, str]:
     """Endpoint simples de verificação de saúde da API."""
     return {"status": "ok"}
+
+
+# Front-end estático (frontend/index.html, style.css, script.js) servido pela
+# própria API: em produção (Render) site e API ficam na mesma origem, sem
+# precisar configurar "Endereço da API". Este mount deve ser o ÚLTIMO, pois
+# captura qualquer rota não definida acima.
+_FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
+if _FRONTEND_DIR.is_dir():
+    app.mount("/", StaticFiles(directory=_FRONTEND_DIR, html=True), name="frontend")

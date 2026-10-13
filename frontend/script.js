@@ -136,7 +136,14 @@
 
   function loadStoredApiBase() {
     const saved = localStorage.getItem(STORAGE_KEYS.apiBase);
-    if (saved) apiBaseInput.value = saved;
+    if (saved) {
+      apiBaseInput.value = saved;
+    } else if (/^https?:$/.test(location.protocol)) {
+      // Hospedado (ex.: Render): a API é servida na mesma origem do site.
+      // Em desenvolvimento local com servidor estático (outra porta), mantém o padrão.
+      const isLocalDev = ["localhost", "127.0.0.1"].includes(location.hostname) && location.port !== "8000";
+      if (!isLocalDev) apiBaseInput.value = location.origin;
+    }
   }
   apiBaseInput.addEventListener("change", () => {
     localStorage.setItem(STORAGE_KEYS.apiBase, apiBaseInput.value.trim());

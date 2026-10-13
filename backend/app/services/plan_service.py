@@ -11,6 +11,7 @@ em arquivo ou em memória durante os testes.
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 from pathlib import Path
 from typing import Optional, Protocol
@@ -77,7 +78,9 @@ class FilePlanRepository:
 
     def __init__(self, storage_dir: Path | None = None) -> None:
         repo_root = Path(__file__).resolve().parents[3]
-        self._storage_dir = storage_dir or repo_root / "data" / "plans"
+        env_dir = os.environ.get("NUTRIFLOW_DATA_DIR")
+        default_dir = Path(env_dir) if env_dir else repo_root / "data" / "plans"
+        self._storage_dir = storage_dir or default_dir
 
     def save(self, diet_plan: DietPlan) -> UUID:
         plan_id = uuid4()
