@@ -83,7 +83,7 @@
   let currentSubstitutionGroups = [];
   let substitutionChoices = {};
   let leftoversGrams = {};
-  let uploadMode = "json";
+  let uploadMode = "pdf";
   let isUpdatingList = false;
   cookingFactorToggle.checked = localStorage.getItem(STORAGE_KEYS.considerCookingFactor) === "true";
 

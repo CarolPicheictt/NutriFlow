@@ -42,14 +42,14 @@
     </svg>
     <h2>Envie seu plano alimentar</h2>
     <div class="upload-tabs" role="tablist" aria-label="Formato do plano">
-      <button class="upload-tab active" id="jsonTab" type="button" role="tab" aria-selected="true">JSON</button>
-      <button class="upload-tab" id="pdfTab" type="button" role="tab" aria-selected="false">PDF</button>
+      <button class="upload-tab active" id="pdfTab" type="button" role="tab" aria-selected="true">PDF</button>
+      <button class="upload-tab" id="jsonTab" type="button" role="tab" aria-selected="false">JSON</button>
     </div>
-    <p id="uploadDescription">Selecione uma ou mais dietas em JSON para somar as compras da casa.</p>
-    <button class="btn btn-primary" id="pickFileBtn" type="button">Selecionar dietas JSON</button>
+    <p id="uploadDescription">Selecione um ou mais PDFs de planos alimentares exportados pelo WebDiet.</p>
+    <button class="btn btn-primary" id="pickFileBtn" type="button">Selecionar dietas PDF</button>
     <div class="inline-error" id="uploadError"></div>
   </section>
-  <input type="file" id="fileInput" accept="application/json,.json" multiple />
+  <input type="file" id="fileInput" accept="application/pdf,.pdf" multiple />
 
   <!-- ESTADO: plano carregado -->
   <section id="planSection" style="display:none;">
