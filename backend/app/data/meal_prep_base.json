@@ -1,0 +1,438 @@
+{
+  "_comentario": "Base editável do Meal Prep. 'methods' traz o preparo mais simples por método de cocção (chaves iguais às da coluna cooking_method de docs/cooking_factors_dieta.xlsx). 'foods' associa alimentos (por palavra-chave, sem acento) a um modo (cook = cozinhar antes de montar; assemble = só montar/consumir), a um método padrão e a links de receitas da internet. A primeira entrada cujas palavras-chave aparecem no nome do alimento é a usada. Os passos são frases curtas em minúsculas, sem ponto final. Links vieram de buscas na web e não são verificados automaticamente.",
+  "version": 1,
+  "methods": {
+    "boiling": {
+      "label": "Cozido na água",
+      "steps": [
+        "coloque em uma panela com água",
+        "deixe ferver até ficar bem cozido",
+        "escorra e deixe esfriar antes de porcionar"
+      ]
+    },
+    "boiling_braising": {
+      "label": "Cozido na panela com água",
+      "steps": [
+        "tempere a gosto e coloque em uma panela com água",
+        "deixe ferver até ficar totalmente cozido",
+        "retire da água e deixe esfriar antes de porcionar"
+      ]
+    },
+    "braising": {
+      "label": "Cozido em panela tampada",
+      "steps": [
+        "tempere a gosto",
+        "cozinhe em panela tampada com um pouco de água até ficar macio",
+        "deixe esfriar antes de porcionar"
+      ]
+    },
+    "grilling": {
+      "label": "Grelhado",
+      "steps": [
+        "tempere a gosto",
+        "grelhe em frigideira ou chapa aquecida até dourar e ficar totalmente cozido",
+        "deixe esfriar antes de porcionar"
+      ]
+    },
+    "broiling_grilling": {
+      "label": "Grelhado",
+      "steps": [
+        "tempere a gosto",
+        "grelhe em frigideira ou chapa aquecida até dourar e ficar totalmente cozido",
+        "deixe esfriar antes de porcionar"
+      ]
+    },
+    "roasting": {
+      "label": "Assado",
+      "steps": [
+        "tempere a gosto",
+        "asse em forno preaquecido até ficar totalmente cozido",
+        "deixe esfriar antes de porcionar"
+      ]
+    },
+    "baking": {
+      "label": "Assado",
+      "steps": [
+        "corte em pedaços e tempere a gosto",
+        "asse em forno preaquecido até ficar macio",
+        "deixe esfriar antes de porcionar"
+      ]
+    },
+    "grilling_baking": {
+      "label": "Grelhado ou assado",
+      "steps": [
+        "tempere a gosto",
+        "grelhe ou asse até ficar totalmente cozido",
+        "deixe esfriar antes de porcionar"
+      ]
+    },
+    "steaming": {
+      "label": "Cozido no vapor",
+      "steps": [
+        "lave e corte em pedaços",
+        "cozinhe no vapor até ficar macio, mas ainda firme",
+        "deixe esfriar antes de porcionar"
+      ]
+    },
+    "sauté": {
+      "label": "Refogado",
+      "steps": [
+        "corte em pedaços",
+        "refogue em frigideira com um fio de azeite até ficar macio",
+        "deixe esfriar antes de porcionar"
+      ]
+    },
+    "microwave": {
+      "label": "Micro-ondas",
+      "steps": [
+        "coloque em um recipiente próprio para micro-ondas",
+        "cozinhe até ficar macio",
+        "deixe esfriar antes de porcionar"
+      ]
+    },
+    "water_absorption": {
+      "label": "Cozido com absorção de água",
+      "steps": [
+        "lave o alimento",
+        "coloque em uma panela com água e sal",
+        "cozinhe com a panela tampada até ficar macio",
+        "deixe esfriar antes de porcionar"
+      ]
+    }
+  },
+  "assembly": {
+    "misture": "Misture {itens} em um recipiente e consuma.",
+    "monte": "Monte o lanche com {itens} e consuma.",
+    "separe": "Separe {itens} e consuma.",
+    "junte": "Junte {itens} em um recipiente ou prato e consuma.",
+    "marmita": "Ao montar cada marmita, acrescente {itens}."
+  },
+  "foods": [
+    {
+      "id": "pao-tapioca",
+      "keywords": [
+        "pao",
+        "paes",
+        "torrada",
+        "tapioca",
+        "biscoito"
+      ],
+      "mode": "assemble",
+      "assemble_verb": "monte"
+    },
+    {
+      "id": "suplementos",
+      "keywords": [
+        "whey",
+        "creatina",
+        "albumina",
+        "bcaa"
+      ],
+      "mode": "assemble",
+      "assemble_verb": "misture"
+    },
+    {
+      "id": "frango-desfiado",
+      "keywords": [
+        "desfiado"
+      ],
+      "mode": "cook",
+      "default_method": "boiling_braising",
+      "extra_steps": [
+        "desfie com dois garfos"
+      ],
+      "links": [
+        {
+          "title": "Frango desfiado simples",
+          "url": "https://www.receiteria.com.br/receita/frango-desfiado-simples/"
+        },
+        {
+          "title": "Peito de frango desfiado simples",
+          "url": "https://www.tudogostoso.com.br/receita/172105-peito-de-frango-desfiado-simples.html"
+        },
+        {
+          "title": "Frango desfiado sem panela de pressão",
+          "url": "https://www.receiteria.com.br/receita/frango-desfiado-sem-panela-de-pressao/"
+        }
+      ]
+    },
+    {
+      "id": "frango",
+      "keywords": [
+        "frango",
+        "sobrecoxa"
+      ],
+      "mode": "cook",
+      "default_method": "boiling_braising",
+      "links": [
+        {
+          "title": "Frango desfiado simples",
+          "url": "https://www.receiteria.com.br/receita/frango-desfiado-simples/"
+        },
+        {
+          "title": "Peito de frango desfiado simples",
+          "url": "https://www.tudogostoso.com.br/receita/172105-peito-de-frango-desfiado-simples.html"
+        },
+        {
+          "title": "Frango desfiado sem panela de pressão",
+          "url": "https://www.receiteria.com.br/receita/frango-desfiado-sem-panela-de-pressao/"
+        }
+      ]
+    },
+    {
+      "id": "carne-bovina",
+      "keywords": [
+        "acem",
+        "patinho",
+        "carne",
+        "hamburguer",
+        "maminha",
+        "lagarto",
+        "coxao",
+        "musculo"
+      ],
+      "mode": "cook",
+      "default_method": "grilling",
+      "links": [
+        {
+          "title": "Hambúrguer caseiro simples",
+          "url": "https://www.tudogostoso.com.br/receita/155011-hamburguer-caseiro.html"
+        },
+        {
+          "title": "Hambúrguer simples",
+          "url": "https://www.receiteria.com.br/receita/hamburguer-simples/"
+        }
+      ]
+    },
+    {
+      "id": "ovo",
+      "keywords": [
+        "ovo"
+      ],
+      "mode": "cook",
+      "default_method": "boiling",
+      "steps": [
+        "coloque os ovos em uma panela com água",
+        "deixe ferver até o ponto desejado",
+        "esfrie em água fria e descasque, se preferir"
+      ],
+      "links": [
+        {
+          "title": "Ovo cozido perfeito",
+          "url": "https://www.receiteria.com.br/receita/ovo-cozido/"
+        },
+        {
+          "title": "Ovo cozido: tempo de cozimento e ponto da gema",
+          "url": "https://www.tudogostoso.com.br/noticias/ovo-cozido-tempo-de-cozimento-e-o-segredo-para-acertar-o-ponto-da-gema-a6993.htm"
+        }
+      ]
+    },
+    {
+      "id": "arroz",
+      "keywords": [
+        "arroz"
+      ],
+      "mode": "cook",
+      "default_method": "water_absorption",
+      "steps": [
+        "lave o arroz",
+        "refogue no alho, se quiser, e adicione água e sal",
+        "cozinhe com a panela tampada até a água secar",
+        "deixe esfriar antes de porcionar"
+      ],
+      "links": [
+        {
+          "title": "Arroz branco",
+          "url": "https://www.tudogostoso.com.br/receita/770-arroz-branco.html"
+        },
+        {
+          "title": "Arroz branco soltinho (sem erro)",
+          "url": "https://www.tudogostoso.com.br/receita/159663-arroz-branco-soltinho-sem-erro.html"
+        }
+      ]
+    },
+    {
+      "id": "feijao",
+      "keywords": [
+        "feijao",
+        "lentilha",
+        "grao de bico"
+      ],
+      "mode": "cook",
+      "default_method": "water_absorption",
+      "steps": [
+        "lave e separe os grãos",
+        "cozinhe em panela com água suficiente para cobrir, até ficar macio",
+        "tempere a gosto e deixe esfriar antes de porcionar"
+      ],
+      "links": [
+        {
+          "title": "Feijão preto na panela de pressão",
+          "url": "https://www.tudogostoso.com.br/receita/197899-feijao-preto-na-panela-de-pressao.html"
+        },
+        {
+          "title": "Feijão preto",
+          "url": "https://www.receiteria.com.br/receita/feijao-preto/"
+        }
+      ]
+    },
+    {
+      "id": "batata-raizes",
+      "keywords": [
+        "batata",
+        "mandioca",
+        "inhame",
+        "mandioquinha"
+      ],
+      "mode": "cook",
+      "default_method": "boiling"
+    },
+    {
+      "id": "massas",
+      "keywords": [
+        "macarrao",
+        "massa"
+      ],
+      "mode": "cook",
+      "default_method": "water_absorption",
+      "steps": [
+        "coloque água com sal em uma panela e deixe ferver",
+        "adicione a massa e cozinhe até ficar no ponto",
+        "escorra e deixe esfriar antes de porcionar"
+      ]
+    },
+    {
+      "id": "legumes",
+      "keywords": [
+        "legume",
+        "brocolis",
+        "abobrinha",
+        "couve flor",
+        "berinjela",
+        "beterraba",
+        "abobora",
+        "chuchu",
+        "vagem",
+        "espinafre"
+      ],
+      "mode": "cook",
+      "default_method": "steaming",
+      "links": [
+        {
+          "title": "Salada de legumes cozidos no vapor",
+          "url": "https://www.tudogostoso.com.br/receita/187111-salada-de-legumes-cozidos-no-vapor.html"
+        },
+        {
+          "title": "Legumes salteados na manteiga",
+          "url": "https://www.receiteria.com.br/receita/legumes-salteados-na-manteiga/"
+        }
+      ]
+    },
+    {
+      "id": "salada-crua",
+      "keywords": [
+        "salada",
+        "alface",
+        "tomate",
+        "cebola",
+        "pepino",
+        "rucula",
+        "cenoura ralada",
+        "limao",
+        "repolho"
+      ],
+      "mode": "assemble",
+      "assemble_verb": "separe"
+    },
+    {
+      "id": "iogurte-leite",
+      "keywords": [
+        "iogurte",
+        "leite"
+      ],
+      "mode": "assemble",
+      "assemble_verb": "misture",
+      "links": [
+        {
+          "title": "Banana split natural (iogurte, banana, aveia e mel)",
+          "url": "https://www.tudogostoso.com.br/receita/111998-banana-split-natural.html"
+        },
+        {
+          "title": "Cestinhas de aveia com banana e iogurte",
+          "url": "https://www.receiteria.com.br/receita/cestinhas-de-aveia-com-banana-e-iogurte/"
+        },
+        {
+          "title": "Barrinha de aveia com banana",
+          "url": "https://www.receiteria.com.br/receita/barrinha-de-aveia-com-banana/"
+        }
+      ]
+    },
+    {
+      "id": "queijos",
+      "keywords": [
+        "queijo",
+        "requeijao",
+        "cottage",
+        "ricota"
+      ],
+      "mode": "assemble",
+      "assemble_verb": "monte"
+    },
+    {
+      "id": "frutas",
+      "keywords": [
+        "banana",
+        "maca",
+        "manga",
+        "melao",
+        "morango",
+        "abacaxi",
+        "abacate",
+        "mamao",
+        "pera",
+        "uva",
+        "kiwi",
+        "laranja",
+        "fruta",
+        "melancia"
+      ],
+      "mode": "assemble",
+      "assemble_verb": "misture"
+    },
+    {
+      "id": "aveia-sementes",
+      "keywords": [
+        "aveia",
+        "chia",
+        "granola",
+        "linhaca"
+      ],
+      "mode": "assemble",
+      "assemble_verb": "misture",
+      "links": [
+        {
+          "title": "Banana split natural (iogurte, banana, aveia e mel)",
+          "url": "https://www.tudogostoso.com.br/receita/111998-banana-split-natural.html"
+        },
+        {
+          "title": "Cestinhas de aveia com banana e iogurte",
+          "url": "https://www.receiteria.com.br/receita/cestinhas-de-aveia-com-banana-e-iogurte/"
+        },
+        {
+          "title": "Barrinha de aveia com banana",
+          "url": "https://www.receiteria.com.br/receita/barrinha-de-aveia-com-banana/"
+        }
+      ]
+    },
+    {
+      "id": "adocantes-pastas",
+      "keywords": [
+        "mel",
+        "pasta de amendoim",
+        "canela"
+      ],
+      "mode": "assemble",
+      "assemble_verb": "misture"
+    }
+  ]
+}
