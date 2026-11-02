@@ -174,7 +174,8 @@ class ShoppingCalculator:
 
         Transforma quantidades brutas em sugestões práticas para o momento
         da compra:
-            - 420 g de frango → "~500g"
+            - 420 g de arroz → "~500g"
+            - 420 g de frango → sem sugestão (carnes aparecem só por peso)
             - 42 unidades de ovos → "42 unidades (3 dúzias + 6)"
 
         Args:
@@ -223,11 +224,9 @@ class ShoppingCalculator:
             if item.category == "suplementos":
                 return self._supplement_package_suggestion(qty)
             if self._is_meat(item.name):
-                packages = max(1, int((qty + 499) // 500))
-                package_weight = packages * 500
-                package_text = UnitNormalizer.format_weight_quantity(package_weight)
-                package_label = "pacote" if packages == 1 else "pacotes"
-                return f"{packages} {package_label} (~{package_text})"
+                # Carnes são exibidas apenas pelo peso exato; sem sugestão
+                # de pacotes ou arredondamento para embalagem.
+                return None
             if qty >= 1000:
                 return UnitNormalizer.format_weight_quantity(qty)
             # Arredonda para a embalagem comercial mais próxima.

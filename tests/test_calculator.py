@@ -73,7 +73,7 @@ def test_supplement_scoop_packages_and_whey_equivalence():
     assert creatine.purchase_suggestion == "1 pacote família de 2kg"
 
 
-def test_weight_display_and_meat_package_suggestion():
+def test_weight_display_and_meat_has_no_package_suggestion():
     plan = DietPlan(meals=[Meal(name="Almoço", items=[
         FoodItem(name="Peito de frango", quantity=1000, unit="g"),
         FoodItem(name="Pão integral", quantity=2, unit="unidade"),
@@ -81,7 +81,7 @@ def test_weight_display_and_meat_package_suggestion():
     ])])
     items = {item.name: item for item in ShoppingCalculator().calculate(plan, days=1)}
 
-    assert items["Peito de frango"].purchase_suggestion == "2 pacotes (~1kg)"
+    assert items["Peito de frango"].purchase_suggestion is None
     assert ShoppingService._format_exact_quantity(items["Peito de frango"]) == "1kg"
     assert items["Pão integral"].unit == "fatias"
     assert items["Pão integral"].purchase_suggestion == "2 fatias"
