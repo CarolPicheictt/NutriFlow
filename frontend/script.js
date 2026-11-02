@@ -73,7 +73,6 @@
   const listError = el("listError");
 
   const copyTextBtn = el("copyTextBtn");
-  const downloadJsonBtn = el("downloadJsonBtn");
 
   const toastEl = el("toast");
 
@@ -962,28 +961,6 @@
       showToast("Lista copiada para a área de transferência");
     } catch (err) {
       showToast(err.message || "Não foi possível copiar a lista.", true);
-    }
-  });
-
-  downloadJsonBtn.addEventListener("click", async () => {
-    const planId = getStoredPlanId();
-    const days = clampDays(daysInput.value);
-    if (selectedMeals.length === 0) { showToast("Selecione ao menos uma refeição.", true); return; }
-    try {
-      const params = createListParams(days, "json");
-      const response = await apiFetch(`/api/v1/shopping/${planId}/export?${params}`);
-      if (!response.ok) throw new ApiError(response.status, "Não foi possível gerar o JSON.");
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `lista-de-compras-${days}dias.json`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      showToast(err.message || "Não foi possível baixar o JSON.", true);
     }
   });
 
