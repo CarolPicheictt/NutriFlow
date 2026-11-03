@@ -89,6 +89,13 @@ def test_links_are_https_pages_with_source_name(catalog):
         assert link.source and not link.source.startswith("www.")
 
 
+def test_method_from_name_uses_the_final_preparation_word(catalog):
+    assert catalog.method_from_name("Sobrecoxa de frango sem pele assada") == "roasting"
+    assert catalog.method_from_name("Salmão grelhado") == "grilling"
+    assert catalog.method_from_name("Frango desfiado") is None
+    assert catalog.method_from_name("") is None
+
+
 def test_assembly_template_falls_back_to_generic_one(catalog):
     assert "{itens}" in catalog.assembly_template("misture")
     assert catalog.assembly_template("verbo-inexistente") == catalog.assembly_template("junte")

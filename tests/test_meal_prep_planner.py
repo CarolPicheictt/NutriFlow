@@ -179,3 +179,14 @@ def test_cook_items_are_ordered_protein_then_carb_then_vegetables(lunch_and_snac
     assert [item.category for item in plan.cook_items] == [
         "proteínas", "carboidratos", "verduras e legumes",
     ]
+
+
+def test_preparation_follows_the_method_written_in_the_name_when_there_is_no_factor():
+    diet = DietPlan(meals=[Meal(name="Almoço", items=[
+        _food("Sobrecoxa de frango sem pele assada", 2, "Unidade(s)"),
+    ])])
+    thigh = MealPrepPlanner().plan(diet, days=5).cook_items[0]
+
+    assert thigh.method == "roasting"
+    assert "asse em forno" in thigh.instruction
+    assert "ferver" not in thigh.instruction

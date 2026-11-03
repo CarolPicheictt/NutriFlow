@@ -223,7 +223,12 @@ class MealPrepPlanner:
             total = round(per_day * days, 1)
             per_portion = per_day
 
-        method_key = factor.cooking_method if factor else (food.default_method if food else None)
+        method_key = (
+            factor.cooking_method
+            if factor
+            else self._catalog.method_from_name(item.name)
+            or (food.default_method if food else None)
+        )
         method = self._catalog.get_method(method_key)
         steps = self._catalog.steps_for(food, method_key)
         unit_type, unit = item.unit_type, item.unit

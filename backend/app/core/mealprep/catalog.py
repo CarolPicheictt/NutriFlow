@@ -68,10 +68,12 @@ class PreparationCatalog:
         methods: dict[str, CookingMethod],
         foods: list[FoodPreparation],
         assembly_templates: dict[str, str],
+        name_methods: Optional[dict[str, str]] = None,
     ) -> None:
         self._methods = methods
         self._foods = foods
         self._assembly_templates = assembly_templates
+        self._name_methods = name_methods or {}
 
     @classmethod
     def from_file(cls, path: Path) -> "PreparationCatalog":
@@ -94,13 +96,20 @@ class PreparationCatalog:
                 for key, value in raw["methods"].items()
             }
             templates = {key: str(text) for key, text in raw["assembly"].items()}
+            name_methods = {
+                normalize_text(word): str(key)
+                for word, key in raw.get("name_methods", {}).items()
+            }
             foods = [cls._parse_food(entry, methods) for entry in raw["foods"]]
         except (KeyError, TypeError, AttributeError) as exc:
             raise ValueError(f"Base de preparo com formato inesperado: {exc!r}") from exc
 
         if "junte" not in templates or "marmita" not in templates:
             raise ValueError("A base de preparo precisa dos modelos 'junte' e 'marmita'.")
-        return cls(methods, foods, templates)
+        unknown = set(name_methods.values()) - set(methods)
+        if unknown:
+            raise ValueError(f"'name_methods' usa métodos inexistentes: {sorted(unknown)}")
+        return cls(methods, foods, templates, name_methods)
 
     @staticmethod
     def _parse_food(entry: dict, methods: dict[str, CookingMethod]) -> FoodPreparation:
@@ -162,6 +171,11 @@ class PreparationCatalog:
             if last in (target, f"{target}s", f"{target}es"):
                 return True
         return False
+
+    def method_from_name(self, name: str) -> Optional[str]:
+        """Método indicado pelo estado no fim do nome (ex.: "assada" → roasting)."""
+        words = normalize_text(name).split()
+        return self._name_methods.get(words[-1]) if words else None
 
     def get_method(self, key: Optional[str]) -> Optional[CookingMethod]:
         return self._methods.get(key) if key else None
