@@ -11,6 +11,8 @@
     substitutionChoices: "nutriflow.substitutionChoices",
     leftoversGrams: "nutriflow.leftoversGrams",
     days: "nutriflow.days",
+    mealPrepMeals: "nutriflow.mealPrepMeals",
+    mealPrepDays: "nutriflow.mealPrepDays",
     considerCookingFactor: "nutriflow.considerCookingFactor",
     planData: "nutriflow.planData",   // cópia local do JSON de cada plano
     checklist: "nutriflow.checklist", // itens marcados por plano
@@ -75,6 +77,24 @@
   const copyTextBtn = el("copyTextBtn");
 
   const toastEl = el("toast");
+
+  const mealPrepSection = el("mealPrepSection");
+  const openMealPrepBtn = el("openMealPrepBtn");
+  const mealPrepBackBtn = el("mealPrepBackBtn");
+  const mealPrepMealOptions = el("mealPrepMealOptions");
+  const mealPrepMealSummary = el("mealPrepMealSummary");
+  const mealPrepMealError = el("mealPrepMealError");
+  const mealPrepDaysInput = el("mealPrepDaysInput");
+  const mealPrepDaysMinus = el("mealPrepDaysMinus");
+  const mealPrepDaysPlus = el("mealPrepDaysPlus");
+  const mealPrepRefreshBtn = el("mealPrepRefreshBtn");
+  const mealPrepError = el("mealPrepError");
+  const mealPrepResult = el("mealPrepResult");
+  const mealPrepHeading = el("mealPrepHeading");
+  const mealPrepCookList = el("mealPrepCookList");
+  const mealPrepAssemblyList = el("mealPrepAssemblyList");
+  const mealPrepNotes = el("mealPrepNotes");
+  const mealPrepCopyBtn = el("mealPrepCopyBtn");
 
   let currentCategories = null; // último resultado carregado da API
   let plans = [];
@@ -265,6 +285,7 @@
     localStorage.removeItem(STORAGE_KEYS.mealsFound);
     localStorage.removeItem(STORAGE_KEYS.plans);
     localStorage.removeItem(STORAGE_KEYS.selectedMeals);
+    localStorage.removeItem(STORAGE_KEYS.mealPrepMeals);
     localStorage.removeItem(STORAGE_KEYS.substitutionChoices);
     localStorage.removeItem(STORAGE_KEYS.leftoversGrams);
     localStorage.removeItem(STORAGE_KEYS.planData);
@@ -295,12 +316,14 @@
   function showUploadScreen() {
     uploadSection.style.display = "block";
     planSection.style.display = "none";
+    mealPrepSection.style.display = "none";
     showError(uploadError, null);
   }
 
   function showPlanScreen() {
     uploadSection.style.display = "none";
     planSection.style.display = "block";
+    mealPrepSection.style.display = "none";
     patientNameEl.textContent = plans.map((plan) => plan.patient_name).filter(Boolean).join(" + ") || "Planos importados";
     const mealCount = plans.reduce((total, plan) => total + plan.meals_found, 0);
     const planLabel = plans.length === 1 ? "plano" : "planos";
@@ -961,6 +984,300 @@
       showToast("Lista copiada para a área de transferência");
     } catch (err) {
       showToast(err.message || "Não foi possível copiar a lista.", true);
+    }
+  });
+
+  // ---------- Meal Prep ----------
+
+  const MEAL_PREP_DEFAULT_DAYS = 5;
+  let mealPrepMeals = [];
+  let mealPrepPlan = null;
+  let isLoadingMealPrep = false;
+
+  function clampMealPrepDays(value) {
+    const n = parseInt(value, 10);
+    return isNaN(n) ? MEAL_PREP_DEFAULT_DAYS : Math.min(31, Math.max(1, n));
+  }
+
+  function showMealPrepScreen() {
+    uploadSection.style.display = "none";
+    planSection.style.display = "none";
+    mealPrepSection.style.display = "block";
+    const stored = readStoredJson(STORAGE_KEYS.mealPrepMeals, null);
+    const base = Array.isArray(stored) ? stored : selectedMeals;
+    mealPrepMeals = availableMeals.filter((meal) => base.includes(meal));
+    mealPrepDaysInput.value = clampMealPrepDays(localStorage.getItem(STORAGE_KEYS.mealPrepDays));
+    renderMealPrepMeals();
+    if (mealPrepMeals.length) loadMealPrep();
+  }
+
+  function renderMealPrepMeals() {
+    mealPrepMealOptions.replaceChildren();
+    const groups = new Map();
+    availableMeals.forEach((meal) => {
+      const { personName, label } = splitPersonLabel(meal);
+      if (!groups.has(personName)) groups.set(personName, []);
+      groups.get(personName).push({ value: meal, label });
+    });
+    groups.forEach((meals, personName) => {
+      const group = document.createElement("section");
+      group.className = "meal-person-group";
+      if (personName) {
+        const heading = document.createElement("h3");
+        heading.className = "meal-person-title";
+        heading.textContent = personName;
+        group.appendChild(heading);
+      }
+      const options = document.createElement("div");
+      options.className = "meal-person-options";
+      meals.forEach((meal) => {
+        const label = document.createElement("label");
+        label.className = "meal-option";
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = meal.value;
+        checkbox.checked = mealPrepMeals.includes(meal.value);
+        checkbox.addEventListener("change", () => {
+          mealPrepMeals = availableMeals.filter((name) => {
+            const input = [...mealPrepMealOptions.querySelectorAll("input")].find((i) => i.value === name);
+            return input && input.checked;
+          });
+          writeStoredJson(STORAGE_KEYS.mealPrepMeals, mealPrepMeals);
+          updateMealPrepControls();
+        });
+        const name = document.createElement("span");
+        name.textContent = meal.label;
+        label.append(checkbox, name);
+        options.appendChild(label);
+      });
+      group.appendChild(options);
+      mealPrepMealOptions.appendChild(group);
+    });
+    updateMealPrepControls();
+  }
+
+  function updateMealPrepControls() {
+    const count = mealPrepMeals.length;
+    mealPrepMealSummary.textContent = availableMeals.length
+      ? `${count} de ${availableMeals.length} refeições selecionadas`
+      : "Nenhuma refeição disponível.";
+    showError(mealPrepMealError, count === 0 && availableMeals.length ? "Selecione ao menos uma refeição." : null);
+    mealPrepRefreshBtn.disabled = isLoadingMealPrep || count === 0;
+  }
+
+  async function loadMealPrep() {
+    if (isLoadingMealPrep) return;
+    const planId = getStoredPlanId();
+    if (!planId) return;
+    if (mealPrepMeals.length === 0) {
+      showError(mealPrepMealError, "Selecione ao menos uma refeição.");
+      return;
+    }
+
+    const days = clampMealPrepDays(mealPrepDaysInput.value);
+    mealPrepDaysInput.value = days;
+    localStorage.setItem(STORAGE_KEYS.mealPrepDays, String(days));
+
+    const params = new URLSearchParams({ days: String(days) });
+    appendAdditionalPlanIds(params);
+    const choices = Object.fromEntries(
+      Object.entries(substitutionChoices).filter(([, choice]) => choice !== "default")
+    );
+    if (Object.keys(choices).length) params.set("substitution_choices", JSON.stringify(choices));
+    const leftovers = Object.fromEntries(
+      Object.entries(leftoversGrams).filter(([, quantity]) => quantity > 0)
+    );
+    if (Object.keys(leftovers).length) params.set("leftovers_grams", JSON.stringify(leftovers));
+    if (mealPrepMeals.length !== availableMeals.length) {
+      mealPrepMeals.forEach((meal) => params.append("meal_names", meal));
+    }
+
+    showError(mealPrepError, null);
+    isLoadingMealPrep = true;
+    updateMealPrepControls();
+    mealPrepRefreshBtn.textContent = "Gerando...";
+    try {
+      const response = await apiFetch(`/api/v1/meal-prep/${planId}?${params}`);
+      if (response.status === 404) {
+        clearPlan();
+        showUploadScreen();
+        showToast("Este plano não foi encontrado. Envie o arquivo novamente.", true);
+        return;
+      }
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new ApiError(response.status, body.detail || "Não foi possível gerar o plano de preparo.");
+      }
+      mealPrepPlan = await response.json();
+      renderMealPrep(mealPrepPlan);
+    } catch (err) {
+      showError(mealPrepError, err.message);
+    } finally {
+      isLoadingMealPrep = false;
+      updateMealPrepControls();
+      mealPrepRefreshBtn.textContent = "Gerar plano de preparo";
+    }
+  }
+
+  function node(tag, className, text) {
+    const element = document.createElement(tag);
+    if (className) element.className = className;
+    if (text !== undefined) element.textContent = text;
+    return element;
+  }
+
+  function quantityBox(label, value, primary) {
+    const box = node("div", "prep-quantity" + (primary ? " primary" : ""));
+    box.append(node("small", "", label), node("strong", "", value));
+    return box;
+  }
+
+  function linksBlock(links, title) {
+    const safe = (links || []).filter((link) => /^https:\/\//i.test(link.url));
+    if (!safe.length) return null;
+    const block = node("div", "prep-links", title);
+    const list = node("ul");
+    safe.forEach((link) => {
+      const item = node("li");
+      const anchor = node("a", "", link.title + (link.source ? ` · ${link.source}` : ""));
+      anchor.href = link.url;
+      anchor.target = "_blank";
+      anchor.rel = "noopener noreferrer";
+      item.appendChild(anchor);
+      list.appendChild(item);
+    });
+    block.appendChild(list);
+    return block;
+  }
+
+  function renderMealPrep(plan) {
+    mealPrepHeading.textContent = `Meal Prep para ${plan.days} ${plan.days === 1 ? "dia" : "dias"}`;
+
+    mealPrepCookList.replaceChildren();
+    if (!plan.cook_items.length) {
+      mealPrepCookList.appendChild(node("p", "prep-empty", "Nenhum item das refeições escolhidas precisa ir ao fogo."));
+    }
+    plan.cook_items.forEach((item) => mealPrepCookList.appendChild(buildCookCard(item, plan.days)));
+
+    mealPrepAssemblyList.replaceChildren();
+    if (!plan.assembly.length) {
+      mealPrepAssemblyList.appendChild(node("p", "prep-empty", "Nenhuma montagem necessária."));
+    }
+    plan.assembly.forEach((meal) => mealPrepAssemblyList.appendChild(buildAssemblyCard(meal)));
+
+    mealPrepNotes.replaceChildren(...plan.notes.map((note) => node("li", "", note)));
+    mealPrepResult.hidden = false;
+  }
+
+  function buildCookCard(item, days) {
+    const card = node("article", "prep-card");
+
+    const head = node("div", "prep-card-head");
+    const name = node("div", "prep-card-name");
+    const dot = node("span", "prep-dot");
+    dot.style.background = `var(${CATEGORY_COLOR_VAR[item.category] || "--cat-outros"})`;
+    name.append(dot, node("span", "", item.name));
+    head.appendChild(name);
+    if (item.method_label) head.appendChild(node("span", "prep-method", item.method_label));
+    card.appendChild(head);
+
+    const quantities = node("div", "prep-quantities");
+    if (item.cooked_text) {
+      quantities.append(
+        quantityBox("Cru para cozinhar", item.total_text, true),
+        quantityBox("Rende (cozido)", item.cooked_text),
+        quantityBox("Por marmita", item.per_portion_text)
+      );
+    } else {
+      quantities.appendChild(quantityBox(`Total para ${days} ${days === 1 ? "dia" : "dias"}`, item.total_text, true));
+      if (item.per_portion_text && item.unit_type !== "free") {
+        quantities.appendChild(quantityBox("Por porção", item.per_portion_text));
+      }
+    }
+    card.appendChild(quantities);
+
+    if (item.instruction) card.appendChild(node("p", "prep-instruction", item.instruction));
+    item.warnings.forEach((warning) => card.appendChild(node("div", "prep-warning", warning)));
+
+    if (item.breakdown.length) {
+      const details = node("details", "prep-breakdown");
+      details.appendChild(node("summary", "", "Quanto cada refeição leva"));
+      const list = node("ul");
+      item.breakdown.forEach((part) => {
+        const portion = part.per_portion_text ? ` · ${part.per_portion_text} por porção` : "";
+        list.appendChild(node("li", "", `${part.meal_name}: ${part.total_text}${portion}`));
+      });
+      details.appendChild(list);
+      card.appendChild(details);
+    }
+
+    const links = linksBlock(item.links, "Outras sugestões de receitas:");
+    if (links) card.appendChild(links);
+    return card;
+  }
+
+  function buildAssemblyCard(meal) {
+    const card = node("article", "prep-card");
+    const head = node("div", "prep-card-head");
+    head.appendChild(node("div", "prep-card-name", meal.meal_name));
+    card.appendChild(head);
+    card.appendChild(node("p", "prep-instruction", meal.instruction));
+
+    const list = node("ul", "prep-assembly-items");
+    meal.items.forEach((item) => {
+      const portion = item.per_portion_text && item.unit_type !== "free" ? ` (${item.per_portion_text} por porção)` : "";
+      list.appendChild(node("li", "", `${item.name}: ${item.total_text}${portion}`));
+    });
+    card.appendChild(list);
+
+    const links = linksBlock(meal.links, "Ideias de receitas:");
+    if (links) card.appendChild(links);
+    return card;
+  }
+
+  function mealPrepToText(plan) {
+    const lines = [`MEAL PREP — ${plan.days} ${plan.days === 1 ? "dia" : "dias"}`, `Refeições: ${plan.meals.join(", ")}`, ""];
+    if (plan.cook_items.length) {
+      lines.push("O QUE COZINHAR");
+      plan.cook_items.forEach((item) => {
+        lines.push(`- ${item.instruction}`);
+        const details = [];
+        if (item.cooked_text) details.push(`rende ~${item.cooked_text} cozido`);
+        if (item.per_portion_text && item.unit_type !== "free") details.push(`${item.per_portion_text} por porção`);
+        if (details.length) lines.push(`  (${details.join(" · ")})`);
+        item.warnings.forEach((warning) => lines.push(`  ! ${warning}`));
+      });
+      lines.push("");
+    }
+    if (plan.assembly.length) {
+      lines.push("MONTAGEM E LANCHES");
+      plan.assembly.forEach((meal) => {
+        lines.push(`${meal.meal_name}: ${meal.instruction}`);
+        meal.items.forEach((item) => lines.push(`  - ${item.name}: ${item.total_text}`));
+      });
+    }
+    return lines.join("\n").trim();
+  }
+
+  openMealPrepBtn.addEventListener("click", showMealPrepScreen);
+  mealPrepBackBtn.addEventListener("click", showPlanScreen);
+  mealPrepRefreshBtn.addEventListener("click", loadMealPrep);
+  mealPrepDaysMinus.addEventListener("click", () => {
+    mealPrepDaysInput.value = clampMealPrepDays(Number(mealPrepDaysInput.value) - 1);
+  });
+  mealPrepDaysPlus.addEventListener("click", () => {
+    mealPrepDaysInput.value = clampMealPrepDays(Number(mealPrepDaysInput.value) + 1);
+  });
+  mealPrepDaysInput.addEventListener("blur", () => {
+    mealPrepDaysInput.value = clampMealPrepDays(mealPrepDaysInput.value);
+  });
+  mealPrepCopyBtn.addEventListener("click", async () => {
+    if (!mealPrepPlan) return;
+    try {
+      await navigator.clipboard.writeText(mealPrepToText(mealPrepPlan));
+      showToast("Plano de preparo copiado para a área de transferência");
+    } catch (_) {
+      showToast("Não foi possível copiar o plano de preparo.", true);
     }
   });
 
