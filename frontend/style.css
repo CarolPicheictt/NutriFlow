@@ -183,3 +183,38 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:48px}
   .item-row{grid-template-columns:18px minmax(0,1fr);row-gap:2px;padding:13px 20px}
   .item-details{grid-column:2;grid-row:2;justify-content:flex-start;text-align:left}
 }
+
+/* ---------- Meal Prep ---------- */
+#mealPrepSection .controls{margin-top:0}
+.prep-section{margin-top:28px}
+.prep-section:empty{display:none}
+.prep-section-title{font:600 20px var(--serif);margin:0 0 14px;color:var(--ink)}
+.prep-empty{color:var(--muted);font-size:13px;margin:0}
+.prep-list{display:grid;gap:14px}
+.prep-card{background:var(--surface);border-radius:var(--radius);padding:22px 26px;box-shadow:var(--shadow)}
+.prep-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.prep-card-name{display:flex;align-items:center;gap:10px;font:600 17px var(--sans);min-width:0}
+.prep-dot{width:10px;height:10px;border-radius:50%;flex:0 0 auto;background:var(--cat-outros)}
+.prep-method{font-size:12px;color:var(--muted);background:var(--gray-tint);border-radius:999px;padding:3px 10px}
+.prep-quantities{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 0}
+.prep-quantity{background:var(--bg);border-radius:16px;padding:9px 14px;min-width:96px}
+.prep-quantity.primary{background:var(--primary-tint)}
+.prep-quantity small{display:block;font-size:11px;color:var(--muted);margin-bottom:1px}
+.prep-quantity strong{font:700 17px var(--sans)}
+.prep-instruction{margin:16px 0 0;font-size:14px;line-height:1.5}
+.prep-steps{margin:10px 0 0;padding-left:20px;font-size:13px;color:#4A4D54;line-height:1.6}
+.prep-warning{margin:12px 0 0;padding:8px 12px;border-radius:12px;background:var(--danger-tint);color:var(--danger);font-size:12px}
+.prep-links{margin:14px 0 0;font-size:12px;color:var(--muted)}
+.prep-links ul{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+.prep-links a{display:inline-block;color:var(--ink);background:var(--bg);border-radius:999px;padding:5px 12px;text-decoration:none;border:1px solid var(--border)}
+.prep-links a:hover{border-color:var(--primary)}
+.prep-breakdown{margin:14px 0 0;font-size:12px;color:var(--muted)}
+.prep-breakdown summary{cursor:pointer}
+.prep-breakdown ul{margin:8px 0 0;padding-left:18px;line-height:1.6}
+.prep-assembly-items{margin:12px 0 0;padding:0;list-style:none;font-size:13px;color:#4A4D54;display:grid;gap:4px}
+.prep-notes{margin:28px 0 0;padding-left:18px;font-size:12px;color:var(--muted);line-height:1.6}
+
+@media (max-width:480px){
+  .prep-card{padding:18px 16px}
+  .prep-quantity{flex:1 1 calc(50% - 10px);min-width:0}
+}

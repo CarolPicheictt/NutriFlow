@@ -128,6 +128,67 @@
 
   </section>
 
+  <section id="mealPrepSection" style="display:none;">
+    <div class="plan-bar">
+      <div class="plan-heading">
+        <div class="info">
+          <strong>Meal Prep</strong>
+          <span>O que cozinhar e montar para as marmitas e lanches</span>
+        </div>
+        <div class="plan-actions">
+          <button class="btn btn-text" id="mealPrepBackBtn" type="button">← Lista de compras</button>
+        </div>
+      </div>
+
+      <section class="meal-filter" aria-labelledby="mealPrepMealsTitle">
+        <div class="meal-filter-header">
+          <div>
+            <h2 id="mealPrepMealsTitle">Refeições para preparar</h2>
+            <p id="mealPrepMealSummary" aria-live="polite">Carregando refeições...</p>
+          </div>
+        </div>
+        <div id="mealPrepMealOptions" class="meal-options" aria-label="Selecione as refeições a preparar"></div>
+        <div class="meal-filter-actions">
+          <span class="inline-error" id="mealPrepMealError" role="alert"></span>
+        </div>
+      </section>
+    </div>
+
+    <div class="controls">
+      <span class="stepper-label">Dias</span>
+      <div class="stepper">
+        <button type="button" id="mealPrepDaysMinus" aria-label="Diminuir dias">–</button>
+        <input type="number" id="mealPrepDaysInput" value="5" min="1" max="31" />
+        <button type="button" id="mealPrepDaysPlus" aria-label="Aumentar dias">+</button>
+      </div>
+      <button class="btn btn-primary" id="mealPrepRefreshBtn" type="button">Gerar plano de preparo</button>
+    </div>
+
+    <div class="inline-error" id="mealPrepError"></div>
+
+    <div id="mealPrepResult" hidden>
+      <div class="shopping-heading">
+        <h2 id="mealPrepHeading">Meal Prep para 5 dias</h2>
+      </div>
+
+      <section class="prep-section" aria-labelledby="mealPrepCookTitle">
+        <h3 class="prep-section-title" id="mealPrepCookTitle">O que cozinhar</h3>
+        <div id="mealPrepCookList" class="prep-list"></div>
+      </section>
+
+      <section class="prep-section" aria-labelledby="mealPrepAssemblyTitle">
+        <h3 class="prep-section-title" id="mealPrepAssemblyTitle">Montagem e lanches</h3>
+        <div id="mealPrepAssemblyList" class="prep-list"></div>
+      </section>
+
+      <ul class="prep-notes" id="mealPrepNotes"></ul>
+
+      <div class="export-row">
+        <button class="btn btn-secondary" id="mealPrepCopyBtn" type="button">Copiar plano de preparo</button>
+      </div>
+    </div>
+  </section>
+
   <footer>Naroli · MVP local · não substitui orientação nutricional</footer>
 </div>
 
