@@ -153,6 +153,26 @@ class ShoppingService:
             substitution_groups=groups,
         )
 
+    def get_selected_plan(
+        self,
+        plan_id: UUID,
+        additional_plan_ids: Optional[list[UUID]] = None,
+        substitution_choices: Optional[dict[str, str]] = None,
+    ) -> Optional[DietPlan]:
+        """
+        Plano (ou planos somados) já com as substituições escolhidas aplicadas.
+
+        Usado por outras features que partem do mesmo plano da lista de
+        compras, como o Meal Prep. Retorna ``None`` se o plano não existir.
+        """
+        diet_plan = self._get_combined_plan(plan_id, additional_plan_ids)
+        if diet_plan is None:
+            return None
+        _, replacement_items = self._build_substitution_groups(diet_plan)
+        return self._apply_substitution_choices(
+            diet_plan, replacement_items, substitution_choices or {}
+        )
+
     def get_available_meals(
         self,
         plan_id: UUID,

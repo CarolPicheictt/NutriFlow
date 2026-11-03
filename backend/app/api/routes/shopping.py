@@ -20,6 +20,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from pydantic import BaseModel
 from starlette.responses import PlainTextResponse
 
+from app.api.decoders import decode_leftovers_grams, decode_substitution_choices
 from app.api.dependencies import get_plan_service, get_shopping_service
 from app.core.models.diet_plan import DietPlan
 from app.core.models.shopping_list import ShoppingItem, ShoppingSubstitutionGroup
@@ -76,45 +77,6 @@ class ChecklistResponse(BaseModel):
 
     item_name: str
     checked: bool
-
-
-def _decode_substitution_choices(raw_choices: str | None) -> dict[str, str] | None:
-    if raw_choices is None:
-        return None
-    try:
-        choices = json.loads(raw_choices)
-    except json.JSONDecodeError as exc:
-        raise HTTPException(status_code=422, detail="Escolhas de substituição inválidas.") from exc
-    if not isinstance(choices, dict) or not all(
-        isinstance(key, str) and isinstance(value, str)
-        for key, value in choices.items()
-    ):
-        raise HTTPException(status_code=422, detail="Escolhas de substituição inválidas.")
-    return choices
-
-
-def _decode_leftovers_grams(raw_leftovers: str | None) -> dict[str, float] | None:
-    if raw_leftovers is None:
-        return None
-    try:
-        leftovers = json.loads(raw_leftovers)
-    except json.JSONDecodeError as exc:
-        raise HTTPException(status_code=422, detail="Quantidades de sobra inválidas.") from exc
-    if not isinstance(leftovers, dict):
-        raise HTTPException(status_code=422, detail="Quantidades de sobra inválidas.")
-
-    decoded: dict[str, float] = {}
-    for name, quantity in leftovers.items():
-        if (
-            not isinstance(name, str)
-            or isinstance(quantity, bool)
-            or not isinstance(quantity, (int, float))
-            or not math.isfinite(quantity)
-            or quantity < 0
-        ):
-            raise HTTPException(status_code=422, detail="Quantidades de sobra inválidas.")
-        decoded[name] = float(quantity)
-    return decoded
 
 
 @router.post("/upload", response_model=UploadResponse)
@@ -224,8 +186,8 @@ async def get_shopping_list(
         days,
         meal_names,
         additional_plan_ids,
-        _decode_substitution_choices(substitution_choices),
-        _decode_leftovers_grams(leftovers_grams),
+        decode_substitution_choices(substitution_choices),
+        decode_leftovers_grams(leftovers_grams),
         consider_cooking_factor,
     )
     if result is None:
@@ -294,8 +256,8 @@ async def export_shopping_list(
         fmt,
         meal_names,
         additional_plan_ids,
-        _decode_substitution_choices(substitution_choices),
-        _decode_leftovers_grams(leftovers_grams),
+        decode_substitution_choices(substitution_choices),
+        decode_leftovers_grams(leftovers_grams),
         consider_cooking_factor,
     )
     if result is None:

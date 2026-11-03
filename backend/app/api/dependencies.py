@@ -17,6 +17,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from app.services.meal_prep_service import MealPrepService
 from app.services.plan_service import FilePlanRepository, InMemoryPlanRepository, PlanService
 from app.services.shopping_service import InMemoryChecklistRepository, ShoppingService
 
@@ -28,6 +29,7 @@ _shopping_service = ShoppingService(
     plan_service=_plan_service,
     checklist_repository=InMemoryChecklistRepository(),
 )
+_meal_prep_service = MealPrepService(_shopping_service)
 
 
 def get_plan_service() -> PlanService:
@@ -38,3 +40,8 @@ def get_plan_service() -> PlanService:
 def get_shopping_service() -> ShoppingService:
     """Retorna a instância compartilhada de ``ShoppingService``."""
     return _shopping_service
+
+
+def get_meal_prep_service() -> MealPrepService:
+    """Retorna a instância compartilhada de ``MealPrepService``."""
+    return _meal_prep_service

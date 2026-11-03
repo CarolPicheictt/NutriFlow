@@ -17,6 +17,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from app.api.routes.meal_prep import router as meal_prep_router
 from app.api.routes.shopping import router as shopping_router
 
 app = FastAPI(
@@ -41,6 +42,7 @@ app.add_middleware(
 )
 
 app.include_router(shopping_router)
+app.include_router(meal_prep_router)
 
 
 @app.get("/health", tags=["health"])
