@@ -1140,14 +1140,18 @@
   function linksBlock(links, title) {
     const safe = (links || []).filter((link) => /^https:\/\//i.test(link.url));
     if (!safe.length) return null;
-    const block = node("div", "prep-links", title);
+    const block = node("div", "prep-links");
+    block.appendChild(node("p", "prep-links-label", title));
     const list = node("ul");
     safe.forEach((link) => {
       const item = node("li");
-      const anchor = node("a", "", link.title + (link.source ? ` · ${link.source}` : ""));
+      const anchor = node("a");
       anchor.href = link.url;
       anchor.target = "_blank";
       anchor.rel = "noopener noreferrer";
+      anchor.insertAdjacentHTML("beforeend", ICONS.external);
+      anchor.appendChild(document.createTextNode(link.title));
+      if (link.source) anchor.appendChild(node("span", "", link.source));
       item.appendChild(anchor);
       list.appendChild(item);
     });
@@ -1194,49 +1198,135 @@
     return `${plural(plan.days, "porção", "porções")} de ${meals}: ${cook}${assembly}.`;
   }
 
-  function buildCookCard(item, days) {
-    const card = node("article", "prep-card");
+  // Ícones estáticos (sem texto vindo do plano): inline para herdar a cor do texto.
+  const ICONS = {
+    pot: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7h11v3.2a3.3 3.3 0 0 1-3.3 3.3H5.8a3.3 3.3 0 0 1-3.3-3.3V7z"/><path d="M1 7h14M6 4.2c0-.8.8-.8.8-1.6M9.2 4.2c0-.8.8-.8.8-1.6"/></svg>',
+    info: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.2"/><path d="M8 7.2v3.6M8 5.2v.1"/></svg>',
+    external: '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 2.5H3a1 1 0 0 0-1 1V9a1 1 0 0 0 1 1h5.5a1 1 0 0 0 1-1V7M7 2h3v3M10 2L5.5 6.5"/></svg>',
+  };
 
-    const head = node("div", "prep-card-head");
-    const name = node("div", "prep-card-name");
-    const dot = node("span", "prep-dot");
-    dot.style.background = `var(${CATEGORY_COLOR_VAR[item.category] || "--cat-outros"})`;
-    name.append(dot, node("span", "", item.name));
-    head.appendChild(name);
-    if (item.method_label) head.appendChild(node("span", "prep-method", item.method_label));
-    card.appendChild(head);
+  function withIcon(tag, className, icon, text) {
+    const element = node(tag, className);
+    element.insertAdjacentHTML("afterbegin", icon);
+    element.appendChild(document.createTextNode(text));
+    return element;
+  }
 
-    const quantities = node("div", "prep-quantities");
-    if (item.cooked_text) {
-      quantities.append(
-        quantityBox("Cru para cozinhar", item.total_text, true),
-        quantityBox("Rende (cozido)", item.cooked_text),
-        quantityBox("Por marmita", item.per_portion_text)
-      );
-    } else {
-      quantities.appendChild(quantityBox(`Total para ${days} ${days === 1 ? "dia" : "dias"}`, item.total_text, true));
-      if (item.per_portion_text && item.unit_type !== "free") {
-        quantities.appendChild(quantityBox("Por porção", item.per_portion_text));
-      }
+  const MEAL_PREP_MAX_BOXES = 14;
+
+  function splitQuantity(text) {
+    const match = /^([\d.,]+)\s*(.*)$/.exec(text || "");
+    return match ? { num: match[1], unit: match[2] } : { num: text || "", unit: "" };
+  }
+
+  function formatFactor(value) {
+    return String(Number(value.toFixed(2))).replace(".", ",");
+  }
+
+  function portionWord(item) {
+    const lunchLike = /almo|janta|jantar|marmit/i;
+    return (item.source_meals || []).some((meal) => lunchLike.test(meal)) ? "marmita" : "porção";
+  }
+
+  function station(text, caption, primary) {
+    const box = node("div", "prep-station" + (primary ? " is-primary" : ""));
+    const { num, unit } = splitQuantity(text);
+    const number = node("strong", "prep-num" + (unit || /^\d/.test(num) ? "" : " is-text"), num);
+    if (unit) number.appendChild(node("small", "", unit));
+    box.append(number, node("span", "prep-caption", caption));
+    return box;
+  }
+
+  function flowLink(label, title) {
+    const link = node("div", "prep-link");
+    if (label) {
+      const pill = node("span", "prep-factor", label);
+      if (title) { pill.title = title; pill.tabIndex = 0; }
+      link.appendChild(pill);
     }
-    card.appendChild(quantities);
+    link.appendChild(node("span", "prep-arrow"));
+    return link;
+  }
 
-    if (item.instruction) card.appendChild(node("p", "prep-instruction", item.instruction));
-    item.warnings.forEach((warning) => card.appendChild(node("div", "prep-warning", warning)));
+  function marmitaBoxes(days) {
+    const boxes = node("div", "prep-boxes");
+    boxes.setAttribute("role", "img");
+    boxes.setAttribute("aria-label", plural(days, "porção", "porções"));
+    for (let i = 0; i < Math.min(days, MEAL_PREP_MAX_BOXES); i++) {
+      const box = node("i", "marmita");
+      box.style.setProperty("--i", i);
+      boxes.appendChild(box);
+    }
+    if (days > MEAL_PREP_MAX_BOXES) boxes.appendChild(node("span", "prep-more", `+${days - MEAL_PREP_MAX_BOXES}`));
+    return boxes;
+  }
+
+  function buildFlow(item, days) {
+    const flow = node("div", "prep-flow");
+    const factor = item.cooking_factor;
+    const isFree = item.unit_type === "free";
+    const perDayMatches = (total) => item.per_portion_quantity != null
+      && Math.abs(total / days - item.per_portion_quantity) < 1;
+
+    if (factor && item.cooked_text) {
+      const title = `Rendimento: o alimento cozido pesa ${formatFactor(factor.yield_factor)}× o peso cru. `
+        + `Fonte: ${factor.source_reference}. Confiança: ${factor.confidence}.`;
+      flow.append(
+        station(item.total_text, "crus para cozinhar", true),
+        flowLink(`×${formatFactor(factor.yield_factor)}`, title),
+        station(item.cooked_text, "rende cozido")
+      );
+      flow.appendChild(flowLink(perDayMatches(item.cooked_quantity) ? `÷${days}` : ""));
+    } else {
+      const caption = item.unit_type === "weight_g" ? "para cozinhar" : "no total";
+      flow.appendChild(station(item.total_text, caption, true));
+      if (!isFree) flow.appendChild(flowLink(perDayMatches(item.total_quantity) ? `÷${days}` : ""));
+    }
+
+    if (!isFree && item.per_portion_text) {
+      const last = station(item.per_portion_text, `por ${portionWord(item)}`);
+      last.appendChild(marmitaBoxes(days));
+      flow.appendChild(last);
+    }
+    return flow;
+  }
+
+  function instructionBlock(text) {
+    const paragraph = node("p", "prep-instruction");
+    const split = text.indexOf(": ");
+    if (split < 0) {
+      paragraph.textContent = text;
+    } else {
+      paragraph.append(node("b", "", text.slice(0, split + 1)), document.createTextNode(text.slice(split + 1)));
+    }
+    return paragraph;
+  }
+
+  function buildCookCard(item, days) {
+    const card = node("article", "prep-cook");
+    card.style.setProperty("--cat", `var(${CATEGORY_COLOR_VAR[item.category] || "--cat-outros"})`);
+
+    const head = node("header", "prep-cook-head");
+    head.appendChild(node("h4", "prep-cook-name", item.name));
+    if (item.method_label) head.appendChild(withIcon("span", "prep-method", ICONS.pot, item.method_label));
+    card.append(head, buildFlow(item, days));
+
+    if (item.instruction) card.appendChild(instructionBlock(item.instruction));
+    item.warnings.forEach((warning) => card.appendChild(withIcon("div", "prep-warning", ICONS.info, warning)));
 
     if (item.breakdown.length) {
       const details = node("details", "prep-breakdown");
       details.appendChild(node("summary", "", "Quanto cada refeição leva"));
       const list = node("ul");
       item.breakdown.forEach((part) => {
-        const portion = part.per_portion_text ? ` · ${part.per_portion_text} por porção` : "";
+        const portion = part.per_portion_text ? `, ${part.per_portion_text} por porção` : "";
         list.appendChild(node("li", "", `${part.meal_name}: ${part.total_text}${portion}`));
       });
       details.appendChild(list);
       card.appendChild(details);
     }
 
-    const links = linksBlock(item.links, "Outras sugestões de receitas:");
+    const links = linksBlock(item.links, "Outras sugestões de receitas");
     if (links) card.appendChild(links);
     return card;
   }
