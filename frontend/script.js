@@ -91,6 +91,9 @@
   const mealPrepError = el("mealPrepError");
   const mealPrepResult = el("mealPrepResult");
   const mealPrepHeading = el("mealPrepHeading");
+  const mealPrepSummary = el("mealPrepSummary");
+  const mealPrepCookCount = el("mealPrepCookCount");
+  const mealPrepAssemblyCount = el("mealPrepAssemblyCount");
   const mealPrepCookList = el("mealPrepCookList");
   const mealPrepAssemblyList = el("mealPrepAssemblyList");
   const mealPrepNotes = el("mealPrepNotes");
@@ -1154,6 +1157,11 @@
 
   function renderMealPrep(plan) {
     mealPrepHeading.textContent = `Meal Prep para ${plan.days} ${plan.days === 1 ? "dia" : "dias"}`;
+    mealPrepSummary.textContent = mealPrepSummaryText(plan);
+    mealPrepCookCount.textContent = plan.cook_items.length;
+    mealPrepCookCount.hidden = plan.cook_items.length === 0;
+    mealPrepAssemblyCount.textContent = plan.assembly.length;
+    mealPrepAssemblyCount.hidden = plan.assembly.length === 0;
 
     mealPrepCookList.replaceChildren();
     if (!plan.cook_items.length) {
@@ -1169,6 +1177,21 @@
 
     mealPrepNotes.replaceChildren(...plan.notes.map((note) => node("li", "", note)));
     mealPrepResult.hidden = false;
+  }
+
+  function plural(count, one, many) {
+    return `${count} ${count === 1 ? one : many}`;
+  }
+
+  function mealPrepSummaryText(plan) {
+    const meals = plural(plan.meals.length, "refeição", "refeições");
+    const cook = plan.cook_items.length
+      ? `${plural(plan.cook_items.length, "alimento vai", "alimentos vão")} ao fogo`
+      : "nada precisa ir ao fogo";
+    const assembly = plan.assembly.length
+      ? ` e ${plural(plan.assembly.length, "refeição tem", "refeições têm")} montagem`
+      : "";
+    return `${plural(plan.days, "porção", "porções")} de ${meals}: ${cook}${assembly}.`;
   }
 
   function buildCookCard(item, days) {

@@ -185,16 +185,42 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:48px}
 }
 
 /* ---------- Meal Prep ---------- */
-#mealPrepSection .controls{margin-top:0}
-.prep-section{margin-top:28px}
-.prep-section:empty{display:none}
-.prep-section-title{font:600 20px var(--serif);margin:0 0 14px;color:var(--ink)}
-.prep-empty{color:var(--muted);font-size:13px;margin:0}
-.prep-list{display:grid;gap:14px}
+.prep-back{display:inline-flex;align-items:center;gap:4px}
+.prep-back svg{width:16px;height:16px;flex:0 0 auto}
+
+/* Seleção de refeições: pílulas que se marcam como uma etiqueta */
+#mealPrepMealOptions{display:flex;flex-direction:column;gap:18px}
+#mealPrepMealOptions .meal-person-group{padding:0;border:none}
+#mealPrepMealOptions .meal-person-options{display:flex;flex-wrap:wrap;gap:8px}
+#mealPrepMealOptions .meal-option{position:relative;align-items:center;gap:9px;padding:9px 16px 9px 12px;border-radius:999px;
+  border:1.5px solid transparent;font-size:14px;font-weight:500;transition:background .15s,border-color .15s}
+#mealPrepMealOptions .meal-option input{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;margin:0}
+#mealPrepMealOptions .meal-option::before{content:"";width:16px;height:16px;border-radius:50%;box-sizing:border-box;flex:0 0 auto;
+  border:1.5px solid #B4B6BC;background:#fff center/10px no-repeat;transition:background-color .15s,border-color .15s}
+#mealPrepMealOptions .meal-option:has(input:checked){border-color:var(--primary)}
+#mealPrepMealOptions .meal-option:has(input:checked)::before{border-color:var(--primary);background-color:var(--primary);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%232B2D31' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 6.4l2.3 2.3 4.7-5'/%3E%3C/svg%3E")}
+#mealPrepMealOptions .meal-option:has(input:focus-visible){outline:2px solid var(--ink);outline-offset:2px}
+
+#mealPrepSection .controls{margin-top:12px}
+
+/* Resultado */
+#mealPrepResult .shopping-heading{margin-bottom:6px}
+.prep-summary{margin:0 0 8px;max-width:56ch;font-size:15px;line-height:1.55;color:#5B5E65}
+.prep-section{margin-top:40px}
+.prep-section-title{display:flex;align-items:center;gap:10px;margin:0 0 16px;font:600 24px var(--serif);letter-spacing:-.01em;color:var(--ink)}
+.prep-count{font:600 12px var(--sans);letter-spacing:0;color:var(--ink);background:var(--primary-tint);border-radius:999px;padding:3px 10px}
+.prep-empty{margin:0;padding:18px 22px;border-radius:20px;background:rgba(255,255,255,.6);color:var(--muted);font-size:14px}
+.prep-list{display:grid;gap:16px}
+.prep-notes{display:grid;gap:8px;margin:36px 0 0;padding:0;list-style:none}
+.prep-notes li{position:relative;padding-left:26px;font-size:12.5px;line-height:1.55;color:var(--muted);max-width:68ch}
+.prep-notes li::before{content:"i";position:absolute;left:0;top:1px;width:16px;height:16px;border-radius:50%;background:var(--gray-tint);
+  font:italic 600 11px/16px var(--serif);text-align:center;color:#5B5E65}
+
+/* Cartões (versão anterior; substituídos nos próximos commits) */
 .prep-card{background:var(--surface);border-radius:var(--radius);padding:22px 26px;box-shadow:var(--shadow)}
 .prep-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .prep-card-name{display:flex;align-items:center;gap:10px;font:600 17px var(--sans);min-width:0}
-.prep-dot{width:10px;height:10px;border-radius:50%;flex:0 0 auto;background:var(--cat-outros)}
 .prep-method{font-size:12px;color:var(--muted);background:var(--gray-tint);border-radius:999px;padding:3px 10px}
 .prep-quantities{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 0}
 .prep-quantity{background:var(--bg);border-radius:16px;padding:9px 14px;min-width:96px}
@@ -212,8 +238,6 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:48px}
 .prep-breakdown summary{cursor:pointer}
 .prep-breakdown ul{margin:8px 0 0;padding-left:18px;line-height:1.6}
 .prep-assembly-items{margin:12px 0 0;padding:0;list-style:none;font-size:13px;color:#4A4D54;display:grid;gap:4px}
-.prep-notes{margin:28px 0 0;padding-left:18px;font-size:12px;color:var(--muted);line-height:1.6}
-
 @media (max-width:480px){
   .prep-card{padding:18px 16px}
   .prep-quantity{flex:1 1 calc(50% - 10px);min-width:0}
