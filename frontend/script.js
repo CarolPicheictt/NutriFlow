@@ -1332,20 +1332,26 @@
   }
 
   function buildAssemblyCard(meal) {
-    const card = node("article", "prep-card");
-    const head = node("div", "prep-card-head");
-    head.appendChild(node("div", "prep-card-name", meal.meal_name));
-    card.appendChild(head);
-    card.appendChild(node("p", "prep-instruction", meal.instruction));
+    const card = node("article", "prep-assembly");
+    card.appendChild(node("h4", "prep-assembly-name", meal.meal_name));
+    card.appendChild(node("p", "prep-assembly-text", meal.instruction));
 
-    const list = node("ul", "prep-assembly-items");
+    const tiles = node("ul", "prep-tiles");
     meal.items.forEach((item) => {
-      const portion = item.per_portion_text && item.unit_type !== "free" ? ` (${item.per_portion_text} por porção)` : "";
-      list.appendChild(node("li", "", `${item.name}: ${item.total_text}${portion}`));
+      const tile = node("li", "prep-tile");
+      tile.appendChild(node("span", "prep-tile-name", item.name));
+      const { num, unit } = splitQuantity(item.total_text);
+      const number = node("strong", "prep-num" + (unit || /^\d/.test(num) ? "" : " is-text"), num);
+      if (unit) number.appendChild(node("small", "", unit));
+      tile.appendChild(number);
+      if (item.per_portion_text && item.unit_type !== "free") {
+        tile.appendChild(node("span", "prep-tile-sub", `${item.per_portion_text} por porção`));
+      }
+      tiles.appendChild(tile);
     });
-    card.appendChild(list);
+    card.appendChild(tiles);
 
-    const links = linksBlock(meal.links, "Ideias de receitas:");
+    const links = linksBlock(meal.links, "Ideias de receitas");
     if (links) card.appendChild(links);
     return card;
   }
