@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.core.mealprep.planner import MealPrepPlanner
+from app.core.mealprep.planner import MealPrepPlanner, _format_quantity
 from app.core.models.diet_plan import DietPlan, FoodItem, Meal
 from app.core.models.shopping_list import UnitType
 
@@ -190,3 +190,25 @@ def test_preparation_follows_the_method_written_in_the_name_when_there_is_no_fac
     assert thigh.method == "roasting"
     assert "asse em forno" in thigh.instruction
     assert "ferver" not in thigh.instruction
+
+
+@pytest.mark.parametrize(
+    "unit_type, unit, value, expected",
+    [
+        (UnitType.UNKNOWN, "Xícara(s) chá", 0.5, "0,5 xícara de chá"),
+        (UnitType.UNKNOWN, "Xícara(s) chá", 2.5, "2,5 xícaras de chá"),
+        (UnitType.UNKNOWN, "Xícara(s) de café", 5, "5 xícaras de café"),
+        (UnitType.UNKNOWN, "Xícara(s) de chá", 1, "1 xícara de chá"),
+        (UnitType.UNKNOWN, "Folha(s) grande(s)", 1, "1 folha grande"),
+        (UnitType.UNKNOWN, "Folha(s) grande(s)", 5, "5 folhas grandes"),
+        (UnitType.UNIT, "fatias", 1, "1 fatia"),
+        (UnitType.UNIT, "fatias", 10, "10 fatias"),
+        (UnitType.UNIT, "un", 1, "1 unidade"),
+        (UnitType.UNIT, "un", 2.5, "2,5 unidades"),
+        (UnitType.VOLUME_ML, "ml", 250, "250ml"),
+        (UnitType.VOLUME_ML, "ml", 1000, "1L"),
+        (UnitType.VOLUME_ML, "ml", 1200, "1,2L"),
+    ],
+)
+def test_quantity_text_agrees_with_the_amount(unit_type, unit, value, expected):
+    assert _format_quantity(unit_type, unit, value) == expected

@@ -396,10 +396,39 @@ def _format_quantity(unit_type: UnitType, unit: str, value: Optional[float]) -> 
     if unit_type == UnitType.WEIGHT_G:
         return UnitNormalizer.format_weight_quantity(value)
     if unit_type == UnitType.VOLUME_ML:
-        return f"{value / 1000:.1f}L".replace(".", ",") if value >= 1000 else f"{value:.0f}ml"
+        if value >= 1000:
+            return f"{round(value / 1000, 2):g}L".replace(".", ",")
+        return f"{value:.0f}ml"
     number = f"{int(value)}" if float(value).is_integer() else f"{value:.1f}".replace(".", ",")
-    label = {"un": "unidade" if value == 1 else "unidades"}.get(unit, unit)
-    return f"{number} {label}".strip()
+    return f"{number} {_unit_label(unit, value)}".strip()
+
+
+_SINGULAR_OF_PLURAL = {"fatias": "fatia", "unidades": "unidade", "porções": "porção"}
+_MEASURE_NOUN = re.compile(r"^(xícara|colher)(\(e?s\))? (chá|sopa|sobremesa|café)$")
+
+
+def _unit_label(unit: str, value: float) -> str:
+    """
+    Nome da unidade concordando com a quantidade (singular até 1, plural acima).
+
+    Resolve os formatos do WebDiet: "Xícara(s) chá" → "xícaras de chá",
+    "Folha(s) grande(s)" → "folhas grandes", "fatias" → "fatia" (quando 1).
+    """
+    singular = value <= 1
+    label = unit.strip().lower()
+    label = _MEASURE_NOUN.sub(lambda m: f"{m.group(1)}{m.group(2) or ''} de {m.group(3)}", label)
+    label = re.sub(
+        r"\((e?s)\)",
+        lambda m: "" if singular else m.group(1),
+        label,
+    )
+    label = label.replace("xícaraes", "xícaras").replace("colhers", "colheres")
+    if label == "un":
+        return "unidade" if singular else "unidades"
+    first, _, rest = label.partition(" ")
+    if singular and first in _SINGULAR_OF_PLURAL:
+        first = _SINGULAR_OF_PLURAL[first]
+    return f"{first} {rest}".strip()
 
 
 def _display_name(name: str) -> str:
