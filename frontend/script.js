@@ -971,21 +971,23 @@
 
   // ---------- exportação ----------
 
-  copyTextBtn.addEventListener("click", async () => {
-    const planId = getStoredPlanId();
-    const days = clampDays(daysInput.value);
-    if (selectedMeals.length === 0) { showToast("Selecione ao menos uma refeição.", true); return; }
-    try {
-      const params = createListParams(days, "text");
-      const response = await apiFetch(`/api/v1/shopping/${planId}/export?${params}`);
-      if (!response.ok) throw new ApiError(response.status, "Não foi possível gerar a lista em texto.");
-      const text = await response.text();
-      await navigator.clipboard.writeText(text);
-      showToast("Lista copiada para a área de transferência");
-    } catch (err) {
-      showToast(err.message || "Não foi possível copiar a lista.", true);
-    }
-  });
+  if (copyTextBtn) {
+    copyTextBtn.addEventListener("click", async () => {
+      const planId = getStoredPlanId();
+      const days = clampDays(daysInput.value);
+      if (selectedMeals.length === 0) { showToast("Selecione ao menos uma refeição.", true); return; }
+      try {
+        const params = createListParams(days, "text");
+        const response = await apiFetch(`/api/v1/shopping/${planId}/export?${params}`);
+        if (!response.ok) throw new ApiError(response.status, "Não foi possível gerar a lista em texto.");
+        const text = await response.text();
+        await navigator.clipboard.writeText(text);
+        showToast("Lista copiada para a área de transferência");
+      } catch (err) {
+        showToast(err.message || "Não foi possível copiar a lista.", true);
+      }
+    });
+  }
 
   // ---------- Meal Prep ----------
 
