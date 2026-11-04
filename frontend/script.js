@@ -971,6 +971,7 @@
 
   // ---------- exportação ----------
 
+  if (copyTextBtn) {
     copyTextBtn.addEventListener("click", async () => {
       const planId = getStoredPlanId();
       const days = clampDays(daysInput.value);
@@ -986,6 +987,7 @@
         showToast(err.message || "Não foi possível copiar a lista.", true);
       }
     });
+  }
 
   // ---------- Meal Prep ----------
 
