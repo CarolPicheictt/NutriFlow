@@ -31,6 +31,8 @@ _______________________________________________
 - Sunday meal prep
 - Indicação de preparação das refeições
 
+-criar uma forma de poder dividir a semana com as substituições, (quero 3 dias de frango e 3 dias de carne moída)
+
 - integração com app de mercado + calculo do frete
 - criar uma forma para validar o sistema remotamente
 - verificar responsividade para celular

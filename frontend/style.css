@@ -20,12 +20,10 @@ body::before{content:"";position:absolute;inset:0 0 auto 0;height:340px;z-index:
 
 /* Header */
 header.app-header{position:relative;display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:56px}
-header.app-header::after{content:"NAROLI";position:absolute;left:-6px;top:38px;font:700 96px/1 var(--sans);letter-spacing:-.04em;
-  color:rgba(255,255,255,.28);pointer-events:none;z-index:-1}
 .brand{display:flex;align-items:center;gap:12px}
-.brand svg{flex-shrink:0;filter:drop-shadow(0 6px 8px rgba(120,80,0,.25))}
-.brand-text h1{font:700 24px var(--sans);margin:0;letter-spacing:-.02em}
-.brand-text p{margin:2px 0 0;font-size:13px;color:rgba(43,45,49,.7)}
+.brand-logo{display:block;width:180px;height:auto;flex:0 0 auto}
+.brand-logo--light{filter:brightness(0) invert(1)}
+.brand-tagline{max-width:250px;margin:0;font-size:12px;line-height:1.45;color:rgba(43,45,49,.7);padding:8px 14px;}
 .settings-toggle{background:rgba(255,255,255,.55);backdrop-filter:blur(6px);border:none;color:var(--ink);font:500 13px var(--sans);
   cursor:pointer;padding:8px 14px;border-radius:999px}
 .settings-toggle:hover{background:#fff}
@@ -162,7 +160,6 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:48px}
 
 @media (max-width:480px){
   .wrap{padding:28px 16px 90px}
-  header.app-header::after{font-size:64px;top:44px}
   .plan-heading{align-items:flex-start;padding:20px}
   .plan-actions{flex-wrap:wrap;justify-content:flex-end}
   .meal-options{grid-template-columns:1fr}
@@ -274,6 +271,11 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:48px}
 .prep-links a span{color:var(--muted)}
 
 @media (max-width:480px){
+  header.app-header{gap:8px;margin-bottom:44px}
+  .brand{gap:9px}
+  .brand-logo{width:88px}
+  .brand-tagline{max-width:118px;font-size:10px;line-height:1.35}
+  .settings-toggle{padding:7px 10px;font-size:11px}
   .prep-cook{padding:22px 20px 22px 26px}
   .prep-cook-name{font-size:21px}
   .prep-flow{flex-direction:column;gap:0}
